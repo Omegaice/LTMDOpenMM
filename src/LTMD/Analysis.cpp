@@ -132,6 +132,8 @@ namespace OpenMM {
 			const std::vector<Vec3> block_start_forces = blockContext->getState( State::Forces ).getForces();
 #endif
 
+			std::cout << "Block Delta: " << params.blockDelta << std::endl;
+
 			Matrix h( n, n );
 			std::vector<Vec3> initialBlockPositions( blockPositions );
 			for( unsigned int i = 0; i < mLargestBlockSize; i++ ) {
@@ -303,12 +305,96 @@ namespace OpenMM {
 			Matrix HE( n, m );
 			// Compute eps.
 			const double eps = params.sDelta;
+			std::cout << "S Epsilon: " << eps << std::endl;
 
 			// Make a temp copy of positions.
 			std::vector<Vec3> tmppos( positions );
 
+			VerletIntegrator *sInteg = new VerletIntegrator( 0.000001 );
+
+			OpenMM::System *sSystem = new OpenMM::System();
+			for( int i = 0; i < mParticleCount; i++ ) {
+				sSystem->addParticle( mParticleMass[i] );
+			}
+
+			for( int i = 0; i < params.forces.size(); i++ ) {
+				std::string forcename = params.forces[i].name;
+				if( forcename == "RemoveCMMotion" ) {
+					const CMMotionRemover *cm = dynamic_cast<const CMMotionRemover *>(  &context.getSystem().getForce( params.forces[i].index ) );
+					sSystem->addForce( new CMMotionRemover( cm->getFrequency() ));
+				} else if( forcename == "Bond" ) {
+					HarmonicBondForce *hf = new HarmonicBondForce();
+					const HarmonicBondForce *ohf = dynamic_cast<const HarmonicBondForce *>( &context.getSystem().getForce( params.forces[i].index ) );
+					for( int i = 0; i < ohf->getNumBonds(); i++ ) {
+						int particle1, particle2;
+						double length, k;
+						ohf->getBondParameters( i, particle1, particle2, length, k );
+						hf->addBond( particle1, particle2, length, k );
+					}
+					sSystem->addForce( hf );
+				} else if( forcename == "Angle" ) {
+					HarmonicAngleForce *af = new HarmonicAngleForce();
+					const HarmonicAngleForce *ahf = dynamic_cast<const HarmonicAngleForce *>( &context.getSystem().getForce( params.forces[i].index ) );
+					for( int i = 0; i < ahf->getNumAngles(); i++ ) {
+						int particle1, particle2, particle3;
+						double angle, k;
+						ahf->getAngleParameters( i, particle1, particle2, particle3, angle, k );
+						af->addAngle( particle1, particle2, particle3, angle, k );
+					}
+					sSystem->addForce( af );
+				} else if( forcename == "Dihedral" ) {
+					PeriodicTorsionForce *ptf = new PeriodicTorsionForce();
+					const PeriodicTorsionForce *optf = dynamic_cast<const PeriodicTorsionForce *>( &context.getSystem().getForce( params.forces[i].index ) );
+					for( int i = 0; i < optf->getNumTorsions(); i++ ) {
+						int particle1, particle2, particle3, particle4, periodicity;
+						double phase, k;
+						optf->getTorsionParameters( i, particle1, particle2, particle3, particle4, periodicity, phase, k );
+						ptf->addTorsion( particle1, particle2, particle3, particle4, periodicity, phase, k );
+					}
+					sSystem->addForce( ptf );
+				} else if( forcename == "Improper" ) {
+					RBTorsionForce *rbtf = new RBTorsionForce();
+					const RBTorsionForce *orbtf = dynamic_cast<const RBTorsionForce *>( &context.getSystem().getForce( params.forces[i].index ) );
+					for( int i = 0; i < orbtf->getNumTorsions(); i++ ) {
+						int particle1, particle2, particle3, particle4;
+						double c0, c1, c2, c3, c4, c5;
+						orbtf->getTorsionParameters( i, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5 );
+						rbtf->addTorsion( particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5 );
+					}
+					sSystem->addForce( rbtf );
+				} else if( forcename == "Nonbonded" ) {
+					OpenMM::NonbondedForce *nonbonded = new OpenMM::NonbondedForce();
+					const NonbondedForce *nbf = dynamic_cast<const NonbondedForce *>( &context.getSystem().getForce( params.forces[i].index ) );
+    
+					for( int i = 0; i < nbf->getNumParticles(); i++ ){
+						double q, eps, sigma;
+						nbf->getParticleParameters( i, q, sigma, eps );
+						nonbonded->addParticle( q, sigma, eps );
+					}
+
+					for( int i = 0; i < nbf->getNumExceptions(); i++ ){
+						int a, b;
+						double q, eps, sigma;
+						nbf->getExceptionParameters(i, a, b, q, eps, sigma);
+						nonbonded->addException(a, b, q, eps, sigma);
+					}
+
+					nonbonded->setNonbondedMethod( nbf->getNonbondedMethod() );
+					nonbonded->setCutoffDistance( nbf->getCutoffDistance() );
+
+					sSystem->addForce( nonbonded );
+				} else {
+					std::cout << "Unknown Force: " << forcename << std::endl;
+				}
+			}
+
+			OpenMM::Platform &sPlatform = OpenMM::Platform::getPlatformByName( "Reference" );
+
+			OpenMM::Context *sContext = new Context( *sSystem, *sInteg, sPlatform );
+			sContext->setPositions( tmppos );
+
 #ifdef FIRST_ORDER
-			const std::vector<Vec3> forces_start = context.getState( State::Forces ).getForces();
+			const std::vector<Vec3> forces_start = sContext->getState( State::Forces ).getForces();
 #endif
 
 			// Loop over i.
@@ -323,10 +409,10 @@ namespace OpenMM {
 						pos++;
 					}
 				}
-				context.setPositions( tmppos );
+				sContext->setPositions( tmppos );
 
 				// Calculate F(xi).
-				const std::vector<Vec3> forces_forward = context.getState( State::Forces ).getForces();
+				const std::vector<Vec3> forces_forward = sContext->getState( State::Forces ).getForces();
 #ifndef FIRST_ORDER
 				// backward perturbations
 				for( unsigned int i = 0; i < mParticleCount; i++ ) {
@@ -334,10 +420,10 @@ namespace OpenMM {
 						tmppos[i][j] = positions[i][j] - eps * E( 3 * i + j, k ) / sqrt( mParticleMass[i] );
 					}
 				}
-				context.setPositions( tmppos );
+				sContext->setPositions( tmppos );
 
 				// Calculate forces
-				const std::vector<Vec3> forces_backward = context.getState( State::Forces ).getForces();
+				const std::vector<Vec3> forces_backward = sContext->getState( State::Forces ).getForces();
 #endif
 
 				for( int i = 0; i < n; i++ ) {
