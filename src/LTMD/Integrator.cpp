@@ -159,45 +159,44 @@ namespace OpenMM {
 			for( unsigned int i = 0; i < max; i++ ) {
 				SetProjectionChanged( false );
 
-				if( mParameters.ShouldUseMetropolisMinimization ){
-					if(initialPE < mMetropolisPE) {
+				if( initialPE < mMetropolisPE ) {
+					break;
+				}
+
+				const double prob = exp(-( 1.0 / ( BOLTZ * temperature )) * ( initialPE - mMetropolisPE ));
+				if( SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() < prob ) {
+					break;
+				}
+
+				simpleSteps++;
+				double currentPE = LinearMinimize( initialPE );
+				if( mParameters.isAlwaysQuadratic || currentPE > initialPE ) {
+					quadraticSteps++;
+
+					double lambda = 0.0;
+					currentPE = QuadraticMinimize( currentPE, lambda );
+					if( currentPE > initialPE ) {
+						std::cout << "Quadratic Minimization Failed Energy Test [" << currentPE << ", " << initialPE << "] - Forcing Rediagonalization" << std::endl;
+						if( !mParameters.ShouldProtoMolDiagonalize ) computeProjectionVectors();
 						break;
-					}
-
-					simpleSteps++;
-					const double currentPE = LinearMinimize( initialPE );
-					if(currentPE < mMetropolisPE) {
-						break;
-					}
-
-		            const double prob = exp(-(1.0 / (BOLTZ * temperature)) * (currentPE - mMetropolisPE));
-		            if(SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() < prob){
-						break;
-					}
-
-					SaveStep();
-				}else{
-					simpleSteps++;
-					double currentPE = LinearMinimize( initialPE );
-					if( mParameters.isAlwaysQuadratic || currentPE > initialPE ){
-						quadraticSteps++;
-
-						double lambda = 0.0;
-						currentPE = QuadraticMinimize( currentPE, lambda );
-						if( currentPE > initialPE ){
-							std::cout << "Quadratic Minimization Failed Energy Test [" << currentPE << ", " << initialPE << "] - Forcing Rediagonalization" << std::endl;
-							computeProjectionVectors();
+					} else {
+						if( mParameters.ShouldForceRediagOnQuadraticLambda && lambda < 1.0 / maxEigenvalue ) {
+							std::cout << "Quadratic Minimization Failed Lambda Test [" << lambda << ", " << 1.0 / maxEigenvalue << "] - Forcing Rediagonalization" << std::endl;
+							if( !mParameters.ShouldProtoMolDiagonalize ) computeProjectionVectors();
 							break;
-						}else{
-							if( mParameters.ShouldForceRediagOnQuadraticLambda && lambda < 1.0 / maxEigenvalue){
-								std::cout << "Quadratic Minimization Failed Lambda Test [" << lambda << ", " << 1.0 / maxEigenvalue << "] - Forcing Rediagonalization" << std::endl;
-								computeProjectionVectors();
-								break;
-							}
 						}
 					}
 
-					//break if satisfies end condition
+				if( mParameters.ShouldUseMetropolisMinimization ) {
+					if( currentPE < mMetropolisPE ) {
+						break;
+					}
+
+					const double prob = exp(-( 1.0 / ( BOLTZ * temperature )) * ( currentPE - mMetropolisPE ));
+					if( SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() < prob ) {
+						break;
+					}
+				} else {
 					const double diff = initialPE - currentPE;
 					if( diff < getMinimumLimit() && diff >= 0.0 ) {
 						break;
