@@ -125,19 +125,15 @@ namespace OpenMM {
 				blockPositions.push_back( atom );
 			}
 
-			blockContext->setPositions( blockPositions );
-			/*********************************************************************/
-
-#ifdef FIRST_ORDER
-			const std::vector<Vec3> block_start_forces = blockContext->getState( State::Forces ).getForces();
-#endif
+			context->setPositions( blockPositions );
 
 			Matrix h( n, n );
 			std::vector<Vec3> initialBlockPositions( blockPositions );
-			for( unsigned int i = 0; i < mLargestBlockSize; i++ ) {
-				// Perturb the ith degree of freedom in EACH block
-				// Note: not all blocks will have i degrees, we have to check for this
-				for( unsigned int j = 0; j < blocks.size(); j++ ) {
+
+			for( unsigned int j = 0; j < blocks.size(); j++ ) {
+				for( unsigned int i = 0; i < mLargestBlockSize; i++ ) {
+					// Perturb the ith degree of freedom in EACH block
+					// Note: not all blocks will have i degrees, we have to check for this
 					unsigned int dof_to_perturb = 3 * blocks[j] + i;
 					unsigned int atom_to_perturb = dof_to_perturb / 3;  // integer trunc
 
@@ -152,12 +148,11 @@ namespace OpenMM {
 					blockPositions[atom_to_perturb][dof_to_perturb % 3] = initialBlockPositions[atom_to_perturb][dof_to_perturb % 3] - params.blockDelta;
 				}
 
-				blockContext->setPositions( blockPositions );
-				const std::vector<Vec3> forces1 = blockContext->getState( State::Forces ).getForces();
+				context->setPositions( blockPositions );
+				const std::vector<Vec3> forces1 = context->getState( State::Forces ).getForces();
 
-#ifndef FIRST_ORDER
 				// Now, do it again...
-				for( int j = 0; j < blocks.size(); j++ ) {
+				for( unsigned int i = 0; i < mLargestBlockSize; i++ ) {
 					int dof_to_perturb = 3 * blocks[j] + i;
 					int atom_to_perturb = dof_to_perturb / 3;  // integer trunc
 
@@ -172,12 +167,11 @@ namespace OpenMM {
 					blockPositions[atom_to_perturb][dof_to_perturb % 3] = initialBlockPositions[atom_to_perturb][dof_to_perturb % 3] + params.blockDelta;
 				}
 
-				blockContext->setPositions( blockPositions );
-				const std::vector<Vec3> forces2 = blockContext->getState( State::Forces ).getForces();
-#endif
+				context->setPositions( blockPositions );
+				const std::vector<Vec3> forces2 = context->getState( State::Forces ).getForces();
 
 				// revert block positions
-				for( int j = 0; j < blocks.size(); j++ ) {
+				for( unsigned int i = 0; i < mLargestBlockSize; i++ ) {
 					int dof_to_perturb = 3 * blocks[j] + i;
 					int atom_to_perturb = dof_to_perturb / 3;  // integer trunc
 
@@ -193,7 +187,7 @@ namespace OpenMM {
 
 				}
 
-				for( int j = 0; j < blocks.size(); j++ ) {
+				for( unsigned int i = 0; i < mLargestBlockSize; i++ ) {
 					int dof_to_perturb = 3 * blocks[j] + i;
 					int atom_to_perturb = dof_to_perturb / 3;  // integer trunc
 
@@ -216,13 +210,8 @@ namespace OpenMM {
 					}
 
 					for( int k = start_dof; k < end_dof; k++ ) {
-#ifdef FIRST_ORDER
-						double blockscale = 1.0 / ( params.blockDelta * sqrt( mParticleMass[atom_to_perturb] * mParticleMass[k / 3] ) );
-						h( k, col ) = ( forces1[k / 3][k % 3] - block_start_forces[k / 3][k % 3] ) * blockscale;
-#else
 						double blockscale = 1.0 / ( 2 * params.blockDelta * sqrt( mParticleMass[atom_to_perturb] * mParticleMass[k / 3] ) );
 						h( k, col ) = ( forces1[k / 3][k % 3] - forces2[k / 3][k % 3] ) * blockscale;
-#endif
 					}
 				}
 			}
@@ -233,13 +222,13 @@ namespace OpenMM {
 			std::cout << "Time to compute hessian: " << hessElapsed << "ms" << std::endl;
 
 			// Make sure it is exactly symmetric.
-			for( int i = 0; i < n; i++ ) {
+			/*for( int i = 0; i < n; i++ ) {
 				for( int j = 0; j < i; j++ ) {
 					double avg = 0.5f * ( h( i, j ) + h( j, i ) );
 					h( i, j ) = avg;
 					h( j, i ) = avg;
 				}
-			}
+			}*/
 
 			// Diagonalize each block Hessian, get Eigenvectors
 			// Note: The eigenvalues will be placed in one large array, because
@@ -307,10 +296,6 @@ namespace OpenMM {
 			// Make a temp copy of positions.
 			std::vector<Vec3> tmppos( positions );
 
-#ifdef FIRST_ORDER
-			const std::vector<Vec3> forces_start = context.getState( State::Forces ).getForces();
-#endif
-
 			// Loop over i.
 			for( unsigned int k = 0; k < m; k++ ) {
 				// Perturb positions.
@@ -327,7 +312,7 @@ namespace OpenMM {
 
 				// Calculate F(xi).
 				const std::vector<Vec3> forces_forward = context.getState( State::Forces ).getForces();
-#ifndef FIRST_ORDER
+
 				// backward perturbations
 				for( unsigned int i = 0; i < mParticleCount; i++ ) {
 					for( unsigned int j = 0; j < 3; j++ ) {
@@ -338,16 +323,10 @@ namespace OpenMM {
 
 				// Calculate forces
 				const std::vector<Vec3> forces_backward = context.getState( State::Forces ).getForces();
-#endif
 
 				for( int i = 0; i < n; i++ ) {
-#ifdef FIRST_ORDER
-					const double scaleFactor = sqrt( mParticleMass[i / 3] ) * 1.0 * eps;
-					HE( i, k ) = ( forces_forward[i / 3][i % 3] - forces_start[i / 3][i % 3] ) / scaleFactor;
-#else
 					const double scaleFactor = sqrt( mParticleMass[i / 3] ) * 2.0 * eps;
 					HE( i, k ) = ( forces_forward[i / 3][i % 3] - forces_backward[i / 3][i % 3] ) / scaleFactor;
-#endif
 				}
 
 				// restore positions
@@ -370,13 +349,13 @@ namespace OpenMM {
 			MatrixMultiply( E, true, HE, false, S );
 
 			// make S symmetric
-			for( unsigned int i = 0; i < S.Rows; i++ ) {
+			/*for( unsigned int i = 0; i < S.Rows; i++ ) {
 				for( unsigned int j = 0; j < S.Columns; j++ ) {
 					double avg = 0.5f * ( S( i, j ) + S( j, i ) );
 					S( i, j ) = avg;
 					S( j, i ) = avg;
 				}
-			}
+			}*/
 
 			gettimeofday( &tp_s_matrix, NULL );
 
