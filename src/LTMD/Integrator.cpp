@@ -186,6 +186,7 @@ namespace OpenMM {
 							break;
 						}
 					}
+				}
 
 				if( mParameters.ShouldUseMetropolisMinimization ) {
 					if( currentPE < mMetropolisPE ) {
