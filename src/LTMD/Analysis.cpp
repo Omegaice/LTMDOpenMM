@@ -552,7 +552,7 @@ namespace OpenMM {
 					gb->setNonbondedMethod( gbf->getNonbondedMethod() );
 					gb->setCutoffDistance( gbf->getCutoffDistance() );
 
-					blockSystem->addForce( GeneralizedBorn );
+					blockSystem->addForce( gb );
 				} else {
 					std::cout << "Unknown Force: " << forcename << std::endl;
 				}
