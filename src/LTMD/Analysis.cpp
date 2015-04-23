@@ -521,7 +521,7 @@ namespace OpenMM {
 
 					for( unsigned int i = 0; i < nbf->getNumParticles(); i++ ){
 						double charge, sigma, epsilon;
-						nbf->getPartcleParameters( i, charge, sigma, epsilon);
+						nbf->getParticleParameters( i, charge, sigma, epsilon);
 						nonbonded->addParticle( charge, sigma, epsilon );
 					}
 
@@ -541,11 +541,11 @@ namespace OpenMM {
 					const GBSAOBCForce *gbf =  dynamic_cast<const GBSAOBCForce *>( &system.getForce( params.forces[i].index ) );
 
 					gb->setSoluteDielectric( gbf->getSoluteDielectric() );
-					gb->setSolventDielectric( gbf->setSolventDielectric() );
+					gb->setSolventDielectric( gbf->getSolventDielectric() );
 
 					for( unsigned int i = 0; i < gbf->getNumParticles(); i++ ){
 						double charge, radius, scale;
-						gbf->getPartcleParameters( i, charge, radius, scale);
+						gbf->getParticleParameters( i, charge, radius, scale);
 						gb->addParticle( charge, radius, scale );
 					}
 
