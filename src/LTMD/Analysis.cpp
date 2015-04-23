@@ -526,7 +526,7 @@ namespace OpenMM {
 					}
 
 					for( unsigned int i = 0; i < nbf->getNumExceptions(); i++ ){
-						int atom1, atom2,
+						int atom1, atom2;
 						double charge, sigma, epsilon;
 						nbf->getExceptionParameters( i, atom1, atom2, charge, sigma, epsilon);
 						nonbonded->addException( atom1, atom2, charge, sigma, epsilon );
