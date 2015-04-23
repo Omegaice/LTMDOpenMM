@@ -125,7 +125,7 @@ namespace OpenMM {
 				blockPositions.push_back( atom );
 			}
 
-			context->setPositions( blockPositions );
+			blockContext->setPositions( blockPositions );
 
 			Matrix h( n, n );
 			std::vector<Vec3> initialBlockPositions( blockPositions );
@@ -148,8 +148,8 @@ namespace OpenMM {
 					blockPositions[atom_to_perturb][dof_to_perturb % 3] = initialBlockPositions[atom_to_perturb][dof_to_perturb % 3] - params.blockDelta;
 				}
 
-				context->setPositions( blockPositions );
-				const std::vector<Vec3> forces1 = context->getState( State::Forces ).getForces();
+				blockContext->setPositions( blockPositions );
+				const std::vector<Vec3> forces1 = blockContext->getState( State::Forces ).getForces();
 
 				// Now, do it again...
 				for( unsigned int i = 0; i < mLargestBlockSize; i++ ) {
@@ -167,8 +167,8 @@ namespace OpenMM {
 					blockPositions[atom_to_perturb][dof_to_perturb % 3] = initialBlockPositions[atom_to_perturb][dof_to_perturb % 3] + params.blockDelta;
 				}
 
-				context->setPositions( blockPositions );
-				const std::vector<Vec3> forces2 = context->getState( State::Forces ).getForces();
+				blockContext->setPositions( blockPositions );
+				const std::vector<Vec3> forces2 = blockContext->getState( State::Forces ).getForces();
 
 				// revert block positions
 				for( unsigned int i = 0; i < mLargestBlockSize; i++ ) {
@@ -215,6 +215,8 @@ namespace OpenMM {
 					}
 				}
 			}
+
+			blockContext->setPositions(positions);
 
 			gettimeofday( &tp_hess, NULL );
 
@@ -308,10 +310,10 @@ namespace OpenMM {
 						pos++;
 					}
 				}
-				context.setPositions( tmppos );
+				blockContext->setPositions( tmppos );
 
 				// Calculate F(xi).
-				const std::vector<Vec3> forces_forward = context.getState( State::Forces ).getForces();
+				const std::vector<Vec3> forces_forward = blockContext->getState( State::Forces ).getForces();
 
 				// backward perturbations
 				for( unsigned int i = 0; i < mParticleCount; i++ ) {
@@ -319,10 +321,10 @@ namespace OpenMM {
 						tmppos[i][j] = positions[i][j] - eps * E( 3 * i + j, k ) / sqrt( mParticleMass[i] );
 					}
 				}
-				context.setPositions( tmppos );
+				blockContext->setPositions( tmppos );
 
 				// Calculate forces
-				const std::vector<Vec3> forces_backward = context.getState( State::Forces ).getForces();
+				const std::vector<Vec3> forces_backward = blockContext->getState( State::Forces ).getForces();
 
 				for( int i = 0; i < n; i++ ) {
 					const double scaleFactor = sqrt( mParticleMass[i / 3] ) * 2.0 * eps;
@@ -339,7 +341,7 @@ namespace OpenMM {
 
 			// *****************************************************************
 			// restore unperturbed positions
-			context.setPositions( positions );
+			blockContext->setPositions( positions );
 
 			gettimeofday( &tp_s, NULL );
 
