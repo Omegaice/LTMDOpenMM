@@ -476,9 +476,7 @@ namespace OpenMM {
 						int particle1, particle2;
 						double length, k;
 						ohf->getBondParameters( i, particle1, particle2, length, k );
-						if( inSameBlock( particle1, particle2 ) ) {
-							hf->addBond( particle1, particle2, length, k );
-						}
+						hf->addBond( particle1, particle2, length, k );
 					}
 					blockSystem->addForce( hf );
 				} else if( forcename == "Angle" ) {
@@ -490,9 +488,7 @@ namespace OpenMM {
 						int particle1, particle2, particle3;
 						double angle, k;
 						ahf->getAngleParameters( i, particle1, particle2, particle3, angle, k );
-						if( inSameBlock( particle1, particle2, particle3 ) ) {
-							af->addAngle( particle1, particle2, particle3, angle, k );
-						}
+						af->addAngle( particle1, particle2, particle3, angle, k );
 					}
 					blockSystem->addForce( af );
 				} else if( forcename == "Dihedral" ) {
@@ -504,9 +500,7 @@ namespace OpenMM {
 						int particle1, particle2, particle3, particle4, periodicity;
 						double phase, k;
 						optf->getTorsionParameters( i, particle1, particle2, particle3, particle4, periodicity, phase, k );
-						if( inSameBlock( particle1, particle2, particle3, particle4 ) ) {
-							ptf->addTorsion( particle1, particle2, particle3, particle4, periodicity, phase, k );
-						}
+						ptf->addTorsion( particle1, particle2, particle3, particle4, periodicity, phase, k );
 					}
 					blockSystem->addForce( ptf );
 				} else if( forcename == "Improper" ) {
@@ -518,80 +512,47 @@ namespace OpenMM {
 						int particle1, particle2, particle3, particle4;
 						double c0, c1, c2, c3, c4, c5;
 						orbtf->getTorsionParameters( i, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5 );
-						if( inSameBlock( particle1, particle2, particle3, particle4 ) ) {
-							rbtf->addTorsion( particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5 );
-						}
+						rbtf->addTorsion( particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5 );
 					}
 					blockSystem->addForce( rbtf );
 				} else if( forcename == "Nonbonded" ) {
-					// This is a custom nonbonded pairwise force and
-					// includes terms for both LJ and Coulomb.
-					// Note that the step term will go to zero if block1 does not equal block 2,
-					// and will be one otherwise.
-					CustomBondForce *cbf = new CustomBondForce( "4*eps*((sigma/r)^12-(sigma/r)^6)+138.935456*q/r" );
-					const NonbondedForce *nbf = dynamic_cast<const NonbondedForce *>( &system.getForce( params.forces[i].index ) );
+					NonbondedForce *nonbonded = new OpenMM::NonbondedForce();
+					const NonbondedForce *nbf =  dynamic_cast<const NonbondedForce *>( &system.getForce( params.forces[i].index ) );
 
-					cbf->addPerBondParameter( "q" );
-					cbf->addPerBondParameter( "sigma" );
-					cbf->addPerBondParameter( "eps" );
-
-					// store exceptions
-					// exceptions[p1][p2] = params
-					std::map<int, std::map<int, std::vector<double> > > exceptions;
-
-					for( int i = 0; i < nbf->getNumExceptions(); i++ ) {
-						int p1, p2;
-						double q, sig, eps;
-						nbf->getExceptionParameters( i, p1, p2, q, sig, eps );
-						if( inSameBlock( p1, p2 ) ) {
-							std::vector<double> params;
-							params.push_back( q );
-							params.push_back( sig );
-							params.push_back( eps );
-							if( exceptions.count( p1 ) == 0 ) {
-								std::map<int, std::vector<double> > pair_exception;
-								pair_exception[p2] = params;
-								exceptions[p1] = pair_exception;
-							} else {
-								exceptions[p1][p2] = params;
-							}
-						}
+					for( unsigned int i = 0; i < nbf->getNumParticles(); i++ ){
+						double charge, sigma, epsilon;
+						nbf->getPartcleParameters( i, charge, sigma, epsilon);
+						nonbonded->addParticle( charge, sigma, epsilon );
 					}
 
-					// add particle params
-					// TODO: iterate over block dimensions to reduce to O(b^2 N_b)
-					for( int i = 0; i < nbf->getNumParticles() - 1; i++ ) {
-						for( int j = i + 1; j < nbf->getNumParticles(); j++ ) {
-							if( !inSameBlock( i, j ) ) {
-								continue;
-							}
-							// we have an exception -- 1-4 modified interactions, etc.
-							if( exceptions.count( i ) == 1 && exceptions[i].count( j ) == 1 ) {
-								std::vector<double> params = exceptions[i][j];
-								cbf->addBond( i, j, params );
-							}
-							// no exception, normal interaction
-							else {
-								std::vector<double> params;
-								double q1, q2, eps1, eps2, sigma1, sigma2, q, eps, sigma;
-
-								nbf->getParticleParameters( i, q1, sigma1, eps1 );
-								nbf->getParticleParameters( j, q2, sigma2, eps2 );
-
-								q = q1 * q2;
-								sigma = 0.5 * ( sigma1 + sigma2 );
-								eps = sqrt( eps1 * eps2 );
-
-								params.push_back( q );
-								params.push_back( sigma );
-								params.push_back( eps );
-
-								cbf->addBond( i, j, params );
-							}
-						}
+					for( unsigned int i = 0; i < nbf->getNumExceptions(); i++ ){
+						int atom1, atom2,
+						double charge, sigma, epsilon;
+						nbf->getExceptionParameters( i, atom1, atom2, charge, sigma, epsilon);
+						nonbonded->addException( atom1, atom2, charge, sigma, epsilon );
 					}
 
-					blockSystem->addForce( cbf );
+					nonbonded->setNonbondedMethod( nbf->getNonbondedMethod() );
+					nonbonded->setCutoffDistance( nbf->getCutoffDistance() );
+
+					blockSystem->addForce( nonbonded );
+				} else if( forcename == "GBSA" ) {
+					GBSAOBCForce *gb = new OpenMM::GBSAOBCForce();
+					const GBSAOBCForce *gbf =  dynamic_cast<const GBSAOBCForce *>( &system.getForce( params.forces[i].index ) );
+
+					gb->setSoluteDielectric( gbf->getSoluteDielectric() );
+					gb->setSolventDielectric( gbf->setSolventDielectric() );
+
+					for( unsigned int i = 0; i < gbf->getNumParticles(); i++ ){
+						double charge, radius, scale;
+						gbf->getPartcleParameters( i, charge, radius, scale);
+						gb->addParticle( charge, radius, scale );
+					}
+
+					gb->setNonbondedMethod( gbf->getNonbondedMethod() );
+					gb->setCutoffDistance( gbf->getCutoffDistance() );
+
+					blockSystem->addForce( GeneralizedBorn );
 				} else {
 					std::cout << "Unknown Force: " << forcename << std::endl;
 				}
@@ -612,16 +573,14 @@ namespace OpenMM {
 					sPlatform = "OpenCL";
 					break;
 				case Preference::CUDA:
-					//sPlatform = "Cuda";
 					sPlatform = "CUDA";
 					break;
 			}
-			sPlatform = "Reference";
 
 			std::cout << "Platform" << sPlatform << std::endl;
 			OpenMM::Platform &platform = OpenMM::Platform::getPlatformByName( sPlatform );
 
-			/*if( params.BlockDiagonalizePlatform != 0 && params.DeviceID != -1 ) {
+			if( params.BlockDiagonalizePlatform != 0 && params.DeviceID != -1 ) {
 				std::ostringstream stream;
 				stream << params.DeviceID;
 
@@ -631,8 +590,9 @@ namespace OpenMM {
 					platform.setPropertyDefaultValue( "OpenCLDeviceIndex", stream.str() );
 				} else {
 					platform.setPropertyDefaultValue( "CudaDeviceIndex", stream.str() );
+					platform.setPropertyDefaultValue( "CudaPrecision", "double" );
 				}
-			}*/
+			}
 
 			blockContext = new Context( *blockSystem, *integ, platform );
 
