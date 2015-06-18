@@ -545,74 +545,32 @@ namespace OpenMM {
 					}
 					blockSystem->addForce( rbtf );
 				} else if( forcename == "Nonbonded" ) {
-					// This is a custom nonbonded pairwise force and
-					// includes terms for both LJ and Coulomb.
-					// Note that the step term will go to zero if block1 does not equal block 2,
-					// and will be one otherwise.
-					CustomBondForce *cbf = new CustomBondForce( "4*eps*((sigma/r)^12-(sigma/r)^6)+138.935456*q/r" );
-					const NonbondedForce *nbf = dynamic_cast<const NonbondedForce *>( &system.getForce( params.forces[i].index ) );
+					NonbondedForce *nonbonded = new OpenMM::NonbondedForce();
+					const NonbondedForce *nbf =  dynamic_cast<const NonbondedForce *>( &system.getForce( params.forces[i].index ) );
 
-					cbf->addPerBondParameter( "q" );
-					cbf->addPerBondParameter( "sigma" );
-					cbf->addPerBondParameter( "eps" );
+					for( unsigned int i = 0; i < nbf->getNumParticles(); i++ ){
+						double charge, sigma, epsilon;
+						nbf->getPartcleParameters( i, charge, sigma, epsilon);
+						nonbonded->addParticle( charge, sigma, epsilon );
+					}
 
-					// store exceptions
-					// exceptions[p1][p2] = params
-					std::map<int, std::map<int, std::vector<double> > > exceptions;
+					for( unsigned int i = 0; i < nbf->getNumExceptions(); i++ ){
+						int atom1, atom2,
+						double charge, sigma, epsilon;
+						nbf->getExceptionParameters( i, atom1, atom2, charge, sigma, epsilon);
+						nonbonded->addException( atom1, atom2, charge, sigma, epsilon );
+					}
 
-					for( int i = 0; i < nbf->getNumExceptions(); i++ ) {
-						int p1, p2;
-						double q, sig, eps;
-						nbf->getExceptionParameters( i, p1, p2, q, sig, eps );
-						if( inSameBlock( p1, p2 ) ) {
-							std::vector<double> params;
-							params.push_back( q );
-							params.push_back( sig );
-							params.push_back( eps );
-							if( exceptions.count( p1 ) == 0 ) {
-								std::map<int, std::vector<double> > pair_exception;
-								pair_exception[p2] = params;
-								exceptions[p1] = pair_exception;
-							} else {
-								exceptions[p1][p2] = params;
-							}
+					for( unsigned int i = 0; i < nbf->getNumParticles(); i++ ){
+						for( unsigned int j = 0; j < nbf->getNumParticles(); j++ ){
+							if( i != j && !inSameBlock(i, j) ) nonbonded->addException( i, j, 0.0, 1.0, 0.0 );
 						}
 					}
 
-					// add particle params
-					// TODO: iterate over block dimensions to reduce to O(b^2 N_b)
-					for( int i = 0; i < nbf->getNumParticles() - 1; i++ ) {
-						for( int j = i + 1; j < nbf->getNumParticles(); j++ ) {
-							if( !inSameBlock( i, j ) ) {
-								continue;
-							}
-							// we have an exception -- 1-4 modified interactions, etc.
-							if( exceptions.count( i ) == 1 && exceptions[i].count( j ) == 1 ) {
-								std::vector<double> params = exceptions[i][j];
-								cbf->addBond( i, j, params );
-							}
-							// no exception, normal interaction
-							else {
-								std::vector<double> params;
-								double q1, q2, eps1, eps2, sigma1, sigma2, q, eps, sigma;
+					nonbonded->setNonbondedMethod( nbf->getNonbondedMethod() );
+					nonbonded->setCutoffDistance( nbf->getCutoffDistance() );
 
-								nbf->getParticleParameters( i, q1, sigma1, eps1 );
-								nbf->getParticleParameters( j, q2, sigma2, eps2 );
-
-								q = q1 * q2;
-								sigma = 0.5 * ( sigma1 + sigma2 );
-								eps = sqrt( eps1 * eps2 );
-
-								params.push_back( q );
-								params.push_back( sigma );
-								params.push_back( eps );
-
-								cbf->addBond( i, j, params );
-							}
-						}
-					}
-
-					blockSystem->addForce( cbf );
+					blockSystem->addForce( nonbonded );
 				} else {
 					std::cout << "Unknown Force: " << forcename << std::endl;
 				}
