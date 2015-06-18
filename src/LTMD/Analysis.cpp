@@ -595,12 +595,11 @@ namespace OpenMM {
 					sPlatform = "CUDA";
 					break;
 			}
-			sPlatform = "Reference";
 
 			std::cout << "Platform" << sPlatform << std::endl;
 			OpenMM::Platform &platform = OpenMM::Platform::getPlatformByName( sPlatform );
 
-			/*if( params.BlockDiagonalizePlatform != 0 && params.DeviceID != -1 ) {
+			if( params.BlockDiagonalizePlatform != 0 && params.DeviceID != -1 ) {
 				std::ostringstream stream;
 				stream << params.DeviceID;
 
@@ -611,7 +610,7 @@ namespace OpenMM {
 				} else {
 					platform.setPropertyDefaultValue( "CudaDeviceIndex", stream.str() );
 				}
-			}*/
+			}
 
 			blockContext = new Context( *blockSystem, *integ, platform );
 
