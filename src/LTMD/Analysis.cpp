@@ -554,17 +554,17 @@ namespace OpenMM {
 						nonbonded->addParticle( charge, sigma, epsilon );
 					}
 
-					for( unsigned int i = 0; i < nbf->getNumExceptions(); i++ ){
-						int atom1, atom2;
-						double charge, sigma, epsilon;
-						nbf->getExceptionParameters( i, atom1, atom2, charge, sigma, epsilon);
-						nonbonded->addException( atom1, atom2, charge, sigma, epsilon );
-					}
-
 					for( unsigned int i = 0; i < nbf->getNumParticles(); i++ ){
 						for( unsigned int j = 0; j < nbf->getNumParticles(); j++ ){
 							if( i != j && !inSameBlock(i, j) ) nonbonded->addException( i, j, 0.0, 1.0, 0.0 );
 						}
+					}
+
+					for( unsigned int i = 0; i < nbf->getNumExceptions(); i++ ){
+						int atom1, atom2;
+						double charge, sigma, epsilon;
+						nbf->getExceptionParameters( i, atom1, atom2, charge, sigma, epsilon);
+						if( inSameBlock(i, j) ) nonbonded->addException( atom1, atom2, charge, sigma, epsilon );
 					}
 
 					nonbonded->setNonbondedMethod( nbf->getNonbondedMethod() );
