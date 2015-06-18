@@ -557,7 +557,7 @@ namespace OpenMM {
 					std::vector<std::vector<bool> > exceptions;
 					exceptions.resize(nbf->getNumParticles());
 					for( unsigned int i = 0; i < nbf->getNumParticles(); i++ ){
-						exceptions[i].rezie(nbf->getNumParticles());
+						exceptions[i].resize(nbf->getNumParticles());
 						for( unsigned int j = 0; j < nbf->getNumParticles(); j++ ){
 							exceptions[i][j] = false;
 						}
@@ -569,11 +569,18 @@ namespace OpenMM {
 						nbf->getExceptionParameters( i, atom1, atom2, charge, sigma, epsilon);
 						nonbonded->addException( atom1, atom2, charge, sigma, epsilon );
 						exceptions[atom1][atom2] = true;
+						exceptions[atom2][atom1] = true;
+						std::cout << "Exception: Copy " << atom1 << "->" << atom2 << std::endl;
 					}
 
 					for( unsigned int i = 0; i < nbf->getNumParticles(); i++ ){
 						for( unsigned int j = 0; j < nbf->getNumParticles(); j++ ){
-							if( i != j && !inSameBlock(i, j) !exceptions[i][j]) nonbonded->addException( i, j, 0.0, 1.0, 0.0 );
+							if( i != j && !inSameBlock(i, j) && !exceptions[i][j]) {
+								nonbonded->addException( i, j, 0.0, 1.0, 0.0 );
+								exceptions[i][j] = true;
+								exceptions[j][i] = true;
+								std::cout << "Exception: Create " << i << "->" << j << std::endl;
+							}
 						}
 					}
 
