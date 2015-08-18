@@ -570,7 +570,6 @@ namespace OpenMM {
 						nonbonded->addException( atom1, atom2, charge, sigma, epsilon );
 						exceptions[atom1][atom2] = true;
 						exceptions[atom2][atom1] = true;
-						std::cout << "Exception: Copy " << atom1 << "->" << atom2 << std::endl;
 					}
 
 					for( unsigned int i = 0; i < nbf->getNumParticles(); i++ ){
@@ -579,7 +578,6 @@ namespace OpenMM {
 								nonbonded->addException( i, j, 0.0, 1.0, 0.0 );
 								exceptions[i][j] = true;
 								exceptions[j][i] = true;
-								std::cout << "Exception: Create " << i << "->" << j << std::endl;
 							}
 						}
 					}
