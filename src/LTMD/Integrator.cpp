@@ -159,14 +159,7 @@ namespace OpenMM {
 			for( unsigned int i = 0; i < max; i++ ) {
 				SetProjectionChanged( false );
 
-				if( initialPE < mMetropolisPE ) {
-					mMetropolisPE = initialPE;
-					break;
-				}
-
-				const double prob = exp(-( 1.0 / ( BOLTZ * temperature )) * ( initialPE - mMetropolisPE ));
-				if( SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() < prob ) {
-					mMetropolisPE = initialPE;
+				if( MetropolisTermination(initialPE, mMetropolisPE) ) {
 					break;
 				}
 
@@ -191,14 +184,7 @@ namespace OpenMM {
 				}
 
 				if( mParameters.ShouldUseMetropolisMinimization ) {
-					if( currentPE < mMetropolisPE ) {
-						mMetropolisPE = currentPE;
-						break;
-					}
-
-					const double prob = exp(-( 1.0 / ( BOLTZ * temperature )) * ( currentPE - mMetropolisPE ));
-					if( SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() < prob ) {
-						mMetropolisPE = currentPE;
+					if( MetropolisTermination(currentPE, mMetropolisPE) ) {
 						break;
 					}
 				} else {
@@ -223,6 +209,21 @@ namespace OpenMM {
 			mQuadraticMinimizations += quadraticSteps;
 
 			maxEigenvalue = eigStore;
+		}
+
+		const bool Integrator::MetropolisTermination(const double current, double& original) const {
+			if( current < original ) {
+				original = current;
+				return true;
+			}
+
+			const double prob = exp(-( 1.0 / ( BOLTZ * temperature )) * ( current - original ));
+			if( SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() < prob ) {
+				original = current;
+				return true;
+			}
+
+			return false;
 		}
 
 		void Integrator::DiagonalizeMinimize() {

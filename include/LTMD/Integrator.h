@@ -129,6 +129,7 @@ namespace OpenMM {
 				void DiagonalizeMinimize();
 
 				void Minimize( const unsigned int max, unsigned int &simpleSteps, unsigned int &quadraticSteps );
+				const bool MetropolisTermination(const double current, double& initial) const;
 
 				// Kernel Functions
 				void IntegrateStep();
