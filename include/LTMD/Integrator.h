@@ -87,10 +87,7 @@ namespace OpenMM {
 				}
 
 				double computeKineticEnergy();
-				//double computeKineticEnergy() {
-//dynamic_cast<StepKernel &>( kernel.getImpl() ).UpdateTime( *this );
-				//	return kernel.getAs<OpenMM::LTMD::StepKernel>().computeKineticEnergy(*context, *this);
-				//}
+
 				/**
 				 * Get the random number seed.  See setRandomNumberSeed() for details.
 				 */
@@ -120,7 +117,6 @@ namespace OpenMM {
 				unsigned int CompletedSteps() const;
 
 				bool minimize( const unsigned int upperbound );
-				bool minimize( const unsigned int upperbound, const unsigned int lowerbound );
 			protected:
 				void initialize( OpenMM::ContextImpl &context );
 				std::vector<std::string> getKernelNames();

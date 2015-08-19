@@ -45,7 +45,6 @@ namespace OpenMM {
 			}
 			kernel = context->getPlatform().createKernel( StepKernel::Name(), contextRef );
 			( ( StepKernel & )( kernel.getImpl() ) ).initialize( contextRef.getSystem(), *this );
-			//(dynamic_cast<StepKernel &>( kernel.getImpl() )).initialize( contextRef.getSystem(), *this );
 		}
 
 		std::vector<std::string> Integrator::getKernelNames() {
@@ -93,18 +92,15 @@ namespace OpenMM {
 		double Integrator::computeKineticEnergy() {
 			return ( ( StepKernel & )( kernel.getImpl() ) ).computeKineticEnergy( *context, *this );
 		}
+
 		unsigned int Integrator::CompletedSteps() const {
 			return mLastCompleted;
 		}
 
-		/* Save before integration for DiagonalizeMinimize and add test to make
-			sure its not done twice */
 		bool Integrator::DoStep() {
-			//context->updateContextState();
 			if( eigenvectors.size() == 0 || stepsSinceDiagonalize % mParameters.rediagFreq == 0 ) {
 				DiagonalizeMinimize();
 			}
-			stepsSinceDiagonalize++;
 
 			if(mLastCompleted == 0) mMetropolisPE = context->calcForcesAndEnergy( true, true );
 			IntegrateStep();
@@ -116,9 +112,7 @@ namespace OpenMM {
 						DiagonalizeMinimize();
 					}
 				}
-
 			}
-			//((StepKernel &)( kernel.getImpl() )).updateState( *context );
 			TimeAndCounterStep();
 			return true;
 		}
@@ -130,17 +124,7 @@ namespace OpenMM {
 			return ( simple < upperbound );
 		}
 
-		bool Integrator::minimize( const unsigned int upperbound, const unsigned int lowerbound ) {
-			unsigned int simple = 0;
-			Minimize( upperbound, simple );
-
-			std::cout << "Minimizations: " << simple << " Bound: " << lowerbound << std::endl;
-
-			return ( simple < lowerbound );
-		}
-
 		void Integrator::Minimize( const unsigned int max, unsigned int &simpleSteps ) {
-			const double eigStore = maxEigenvalue;
 			if( !mParameters.ShouldProtoMolDiagonalize && eigenvectors.size() == 0 ) {
 				computeProjectionVectors();
 			}
@@ -158,7 +142,6 @@ namespace OpenMM {
 			}
 
 			mSimpleMinimizations += simpleSteps;
-			maxEigenvalue = eigStore;
 		}
 
 		const bool Integrator::MetropolisTermination(const double current, double& original) const {
@@ -204,7 +187,7 @@ namespace OpenMM {
 			gettimeofday( &start, 0 );
 #endif
 			( ( StepKernel & )( kernel.getImpl() ) ).Integrate( *context, *this );
-			//dynamic_cast<StepKernel &>( kernel.getImpl() ).Integrate( *context, *this );
+			stepsSinceDiagonalize++;
 #ifdef PROFILE_INTEGRATOR
 			gettimeofday( &end, 0 );
 			double elapsed = ( end.tv_sec - start.tv_sec ) * 1000.0 + ( end.tv_usec - start.tv_usec ) / 1000.0;
