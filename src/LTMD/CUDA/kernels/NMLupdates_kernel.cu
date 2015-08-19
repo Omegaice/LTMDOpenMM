@@ -85,13 +85,6 @@ extern "C" __global__ void kNMLUpdate3_kernel( int numAtoms, int numModes, float
 		pos.y += dt * v.y;
 		pos.z += dt * v.z;
 
-#ifdef FAST_NOISE
-		/* Remove Noise */
-		pos.x -= noiseVal[atom].x;
-		pos.y -= noiseVal[atom].y;
-		pos.z -= noiseVal[atom].z;
-#endif
-
 		posq[atom] = pos;
 	}
 }
