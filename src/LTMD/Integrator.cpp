@@ -102,7 +102,7 @@ namespace OpenMM {
 				DiagonalizeMinimize();
 			}
 
-			if(mLastCompleted == 0) mMetropolisPE = context->calcForcesAndEnergy( true, true );
+			if( mLastCompleted == 0 ) { mMetropolisPE = context->calcForcesAndEnergy( true, true ); }
 			IntegrateStep();
 			minimize( mParameters.MaximumMinimizationIterations );
 			TimeAndCounterStep();
@@ -113,7 +113,7 @@ namespace OpenMM {
 			unsigned int simple = 0;
 			Minimize( upperbound, simple );
 
-			return ( simple < upperbound );
+			return simple < upperbound;
 		}
 
 		void Integrator::Minimize( const unsigned int max, unsigned int &simpleSteps ) {
@@ -194,7 +194,6 @@ namespace OpenMM {
 #endif
 		}
 
-
 		double Integrator::LinearMinimize( const double energy ) {
 #ifdef PROFILE_INTEGRATOR
 			timeval start, end;
@@ -207,7 +206,7 @@ namespace OpenMM {
 			double elapsed = ( end.tv_sec - start.tv_sec ) * 1000.0 + ( end.tv_usec - start.tv_usec ) / 1000.0;
 			std::cout << "[OpenMM::Integrator] Linear Minimize: " << elapsed << "ms" << std::endl;
 #endif
-		return retVal;
-}
-}
+			return retVal;
+		}
+	}
 }
