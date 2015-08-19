@@ -18,8 +18,6 @@ using namespace OpenMM;
 
 extern void kGenerateRandoms( CudaContext *gpu );
 void kNMLUpdate( CUmodule *module, CudaContext *gpu, float deltaT, float tau, float kT, int numModes, int &iterations, CudaArray &modes, CudaArray &modeWeights, CudaArray &noiseValues );
-void kNMLRejectMinimizationStep( CUmodule *module, CudaContext *gpu, CudaArray &oldpos );
-void kNMLAcceptMinimizationStep( CUmodule *module, CudaContext *gpu, CudaArray &oldpos );
 void kNMLLinearMinimize( CUmodule *module, CudaContext *gpu, int numModes, float maxEigenvalue, CudaArray &oldpos, CudaArray &modes, CudaArray &modeWeights );
 
 double drand() { /* uniform distribution, (0..1] */
@@ -52,7 +50,6 @@ namespace OpenMM {
 				// TMC This is done automatically when you setup a context now.
 				//OpenMM::cudaOpenMMInitializeIntegration( system, data, integrator ); // TMC not sure how to replace
 				data.contexts[0]->initialize();
-				minmodule = data.contexts[0]->createModule( KernelSources::minimizationSteps );
 				linmodule = data.contexts[0]->createModule( KernelSources::linearMinimizers );
 				updatemodule = data.contexts[0]->createModule( KernelSources::NMLupdates );
 
@@ -99,7 +96,6 @@ namespace OpenMM {
 						//cu->getNumThreadBlocks()*cu->ThreadBlockSize
 						modes = new CudaArray( *( data.contexts[0] ), numModes * mParticles, sizeof( float4 ), "NormalModes" );
 						modeWeights = new CudaArray( *( data.contexts[0] ), ( numModes > data.contexts[0]->getNumThreadBlocks()*data.contexts[0]->ThreadBlockSize ? numModes : data.contexts[0]->getNumThreadBlocks()*data.contexts[0]->ThreadBlockSize ), sizeof( float ), "NormalModeWeights" );
-						oldpos = new CudaArray( *( data.contexts[0] ), data.contexts[0]->getPaddedNumAtoms(), sizeof( float4 ), "OldPositions" );
 						pPosqP = new CudaArray( *( data.contexts[0] ), data.contexts[0]->getPaddedNumAtoms(), sizeof( float4 ), "MidIntegPositions" );
 						modesChanged = true;
 					}
@@ -116,10 +112,6 @@ namespace OpenMM {
 						integrator.SetProjectionChanged(false);
 					}
 				}
-			}
-
-			void StepKernel::setOldPositions() {
-				data.contexts[0]->getPosq().copyTo( *oldpos );
 			}
 
 			void StepKernel::Integrate( OpenMM::ContextImpl &context, Integrator &integrator ) {
@@ -142,14 +134,6 @@ namespace OpenMM {
 				data.contexts[0]->setTime( data.contexts[0]->getTime() + integrator.getStepSize() );
 				data.contexts[0]->setStepCount( data.contexts[0]->getStepCount() + 1 );
 				data.contexts[0]->reorderAtoms();
-			}
-
-			void StepKernel::AcceptStep( OpenMM::ContextImpl &context ) {
-				kNMLAcceptMinimizationStep( &minmodule, data.contexts[0], *oldpos );
-			}
-
-			void StepKernel::RejectStep( OpenMM::ContextImpl &context ) {
-				kNMLRejectMinimizationStep( &minmodule, data.contexts[0], *oldpos );
 			}
 
 			void StepKernel::LinearMinimize( OpenMM::ContextImpl &context, Integrator &integrator, const double energy ) {

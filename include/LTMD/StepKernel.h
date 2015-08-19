@@ -31,10 +31,6 @@ namespace OpenMM {
 
 				virtual double computeKineticEnergy( OpenMM::ContextImpl &context, Integrator &integrator ) = 0;
 
-				virtual void setOldPositions( ) { }
-				virtual void AcceptStep( OpenMM::ContextImpl &context ) = 0;
-				virtual void RejectStep( OpenMM::ContextImpl &context ) = 0;
-
 				virtual void LinearMinimize( OpenMM::ContextImpl &context, Integrator &integrator, const double energy ) = 0;
 		};
 	}

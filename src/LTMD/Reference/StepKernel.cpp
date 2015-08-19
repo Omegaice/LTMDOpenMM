@@ -85,28 +85,6 @@ namespace OpenMM {
 				data.stepCount++;
 			}
 
-			void StepKernel::AcceptStep( ContextImpl &context ) {
-				VectorArray &coordinates = extractPositions( context );
-
-				for( unsigned int i = 0; i < mParticles; i++ ) {
-					mPreviousPositions[i][0] = coordinates[i][0];
-					mPreviousPositions[i][1] = coordinates[i][1];
-					mPreviousPositions[i][2] = coordinates[i][2];
-				}
-				mMinimizerScale = 1.0;
-			}
-
-			void StepKernel::RejectStep( ContextImpl &context ) {
-				VectorArray &coordinates = extractPositions( context );
-
-				for( unsigned int i = 0; i < mParticles; i++ ) {
-					coordinates[i][0] = mPreviousPositions[i][0];
-					coordinates[i][1] = mPreviousPositions[i][1];
-					coordinates[i][2] = mPreviousPositions[i][2];
-				}
-				mMinimizerScale *= 0.25;
-			}
-
 			void StepKernel::LinearMinimize( ContextImpl &context, Integrator &integrator, const double energy ) {
 				VectorArray &coordinates = extractPositions( context );
 				const VectorArray &forces = extractForces( context );

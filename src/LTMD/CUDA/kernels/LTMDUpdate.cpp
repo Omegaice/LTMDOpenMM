@@ -36,22 +36,6 @@ void kNMLUpdate( CUmodule *module, CudaContext *cu, float deltaT, float tau, flo
 
 }
 
-void kNMLRejectMinimizationStep( CUmodule *module, CudaContext *cu, CudaArray &oldpos ) {
-	int atoms = cu->getNumAtoms();
-
-	CUfunction rejectKernel = cu->getKernel( *module, "kRejectMinimizationStep_kernel" );
-	void *rejectArgs[] = {&atoms, &cu->getPosq().getDevicePointer(), &oldpos.getDevicePointer() };
-	cu->executeKernel( rejectKernel, rejectArgs, cu->getNumThreadBlocks()*cu->ThreadBlockSize, cu->ThreadBlockSize );
-}
-
-void kNMLAcceptMinimizationStep( CUmodule *module, CudaContext *cu, CudaArray &oldpos ) {
-	int atoms = cu->getNumAtoms();
-
-	CUfunction acceptKernel = cu->getKernel( *module, "kAcceptMinimizationStep_kernel" );
-	void *acceptArgs[] = {&atoms, &cu->getPosq().getDevicePointer(), &oldpos.getDevicePointer() };
-	cu->executeKernel( acceptKernel, acceptArgs, cu->getNumThreadBlocks()*cu->ThreadBlockSize, cu->ThreadBlockSize );
-}
-
 void kNMLLinearMinimize( CUmodule *module, CudaContext *cu, int numModes, float maxEigenvalue, CudaArray &oldpos, CudaArray &modes, CudaArray &modeWeights ) {
 	int atoms = cu->getNumAtoms();
 	int paddedatoms = cu->getPaddedNumAtoms();

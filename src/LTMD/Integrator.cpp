@@ -145,11 +145,9 @@ namespace OpenMM {
 				computeProjectionVectors();
 			}
 
-			double currentPE = context->calcForcesAndEnergy( true, true );
-			( ( StepKernel & )( kernel.getImpl() ) ).setOldPositions();
-
-			//context->getPositions(oldPos); // I need to get old positions here
 			simpleSteps = 0;
+			double currentPE = context->calcForcesAndEnergy( true, true );
+
 			for( unsigned int i = 0; i < max; i++ ) {
 				if( MetropolisTermination(currentPE, mMetropolisPE) ) {
 					break;
@@ -160,7 +158,6 @@ namespace OpenMM {
 			}
 
 			mSimpleMinimizations += simpleSteps;
-
 			maxEigenvalue = eigStore;
 		}
 
@@ -243,31 +240,5 @@ namespace OpenMM {
 #endif
 		return retVal;
 }
-
-		void Integrator::SaveStep() {
-#ifdef PROFILE_INTEGRATOR
-			timeval start, end;
-			gettimeofday( &start, 0 );
-#endif
-			( ( StepKernel & )( kernel.getImpl() ) ).AcceptStep( *context/*, oldPos*/ ); // must pass here
-#ifdef PROFILE_INTEGRATOR
-			gettimeofday( &end, 0 );
-			double elapsed = ( end.tv_sec - start.tv_sec ) * 1000.0 + ( end.tv_usec - start.tv_usec ) / 1000.0;
-			std::cout << "[OpenMM::Integrator] Save Step: " << elapsed << "ms" << std::endl;
-#endif
-		}
-
-		void Integrator::RevertStep() {
-#ifdef PROFILE_INTEGRATOR
-			timeval start, end;
-			gettimeofday( &start, 0 );
-#endif
-			( ( StepKernel & )( kernel.getImpl() ) ).RejectStep( *context/*, oldPos*/ ); // must pass here
-#ifdef PROFILE_INTEGRATOR
-			gettimeofday( &end, 0 );
-			double elapsed = ( end.tv_sec - start.tv_sec ) * 1000.0 + ( end.tv_usec - start.tv_usec ) / 1000.0;
-			std::cout << "[OpenMM::Integrator] Revert Step: " << elapsed << "ms" << std::endl;
-#endif
-		}
-	}
+}
 }
