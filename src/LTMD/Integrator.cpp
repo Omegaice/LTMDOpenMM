@@ -108,7 +108,6 @@ namespace OpenMM {
 
 			if(mLastCompleted == 0) mMetropolisPE = context->calcForcesAndEnergy( true, true );
 			IntegrateStep();
-			SetProjectionChanged( false );
 			if( !minimize( mParameters.MaximumMinimizationIterations ) ) {
 				if( mParameters.ShouldForceRediagOnMinFail ) {
 					if( mParameters.ShouldProtoMolDiagonalize ) {
@@ -146,44 +145,18 @@ namespace OpenMM {
 				computeProjectionVectors();
 			}
 
-			SaveStep();
-
-			double initialPE = context->calcForcesAndEnergy( true, true );
+			double currentPE = context->calcForcesAndEnergy( true, true );
 			( ( StepKernel & )( kernel.getImpl() ) ).setOldPositions();
 
 			//context->getPositions(oldPos); // I need to get old positions here
 			simpleSteps = 0;
-
 			for( unsigned int i = 0; i < max; i++ ) {
-				SetProjectionChanged( false );
-
-				if( MetropolisTermination(initialPE, mMetropolisPE) ) {
+				if( MetropolisTermination(currentPE, mMetropolisPE) ) {
 					break;
 				}
 
 				simpleSteps++;
-				double currentPE = LinearMinimize( initialPE );
-
-				if( mParameters.ShouldUseMetropolisMinimization ) {
-					if( MetropolisTermination(currentPE, mMetropolisPE) ) {
-						break;
-					}
-				} else {
-					const double diff = initialPE - currentPE;
-					if( diff < getMinimumLimit() && diff >= 0.0 ) {
-						break;
-					}
-
-					if( diff > 0.0 ) {
-						SaveStep();
-						initialPE = currentPE;
-					} else {
-						RevertStep();
-						context->calcForcesAndEnergy( true, false );
-
-						maxEigenvalue *= 2;
-					}
-				}
+				currentPE = LinearMinimize(currentPE);
 			}
 
 			mSimpleMinimizations += simpleSteps;

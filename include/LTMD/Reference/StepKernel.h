@@ -49,17 +49,17 @@ namespace OpenMM {
 					 * @param system     the System this kernel will be applied to
 					 * @param integrator the NMLIntegrator this kernel will be used for
 					 */
-					void initialize( const OpenMM::System &system, const Integrator &integrator );
+					void initialize( const OpenMM::System &system, Integrator &integrator );
 
-					void Integrate( OpenMM::ContextImpl &context, const Integrator &integrator );
-					void UpdateTime( const Integrator &integrator );
+					void Integrate( OpenMM::ContextImpl &context, Integrator &integrator );
+					void UpdateTime( Integrator &integrator );
 
 					void AcceptStep( OpenMM::ContextImpl &context );
 					void RejectStep( OpenMM::ContextImpl &context );
 
-					void LinearMinimize( OpenMM::ContextImpl &context, const Integrator &integrator, const double energy );
+					void LinearMinimize( OpenMM::ContextImpl &context, Integrator &integrator, const double energy );
 					void updateState( OpenMM::ContextImpl &context ) {}
-					virtual double computeKineticEnergy( OpenMM::ContextImpl &context, const Integrator &integrator ) {
+					virtual double computeKineticEnergy( OpenMM::ContextImpl &context, Integrator &integrator ) {
 						return computeShiftedKineticEnergy( context, mMasses, 0.5 * integrator.getStepSize() );
 					}
 

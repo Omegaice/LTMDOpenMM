@@ -48,7 +48,7 @@ namespace OpenMM {
 				}
 			}
 
-			void StepKernel::initialize( const System &system, const Integrator &integrator ) {
+			void StepKernel::initialize( const System &system, Integrator &integrator ) {
 				// TMC This is done automatically when you setup a context now.
 				//OpenMM::cudaOpenMMInitializeIntegration( system, data, integrator ); // TMC not sure how to replace
 				data.contexts[0]->initialize();
@@ -72,7 +72,7 @@ namespace OpenMM {
 				data.contexts[0]->getIntegrationUtilities().initRandomNumberGenerator( integrator.getRandomNumberSeed() );
 			}
 
-			void StepKernel::ProjectionVectors( const Integrator &integrator ) {
+			void StepKernel::ProjectionVectors( Integrator &integrator ) {
 				//check if projection vectors changed
 				bool modesChanged = integrator.getProjVecChanged();
 
@@ -92,6 +92,7 @@ namespace OpenMM {
 						modes = NULL;
 						modeWeights = NULL;
 					}
+
 					if( modes == NULL ) {
 						/*modes = new CUDAStream<float4>( numModes * mParticles, 1, "NormalModes" );
 						modeWeights = new CUDAStream<float>( numModes > data.gpu->sim.blocks ? numModes : data.gpu->sim.blocks, 1, "NormalModeWeights" );*/
@@ -112,6 +113,7 @@ namespace OpenMM {
 							}
 						}
 						modes->upload( tmp );
+						integrator.SetProjectionChanged(false);
 					}
 				}
 			}
@@ -120,7 +122,7 @@ namespace OpenMM {
 				data.contexts[0]->getPosq().copyTo( *oldpos );
 			}
 
-			void StepKernel::Integrate( OpenMM::ContextImpl &context, const Integrator &integrator ) {
+			void StepKernel::Integrate( OpenMM::ContextImpl &context, Integrator &integrator ) {
 				ProjectionVectors( integrator );
 
 				// Calculate Constants
@@ -136,7 +138,7 @@ namespace OpenMM {
 							integrator.getNumProjectionVectors(), kIterations, *modes, *modeWeights, *NoiseValues );  // TMC setting parameters for this
 			}
 
-			void StepKernel::UpdateTime( const Integrator &integrator ) {
+			void StepKernel::UpdateTime( Integrator &integrator ) {
 				data.contexts[0]->setTime( data.contexts[0]->getTime() + integrator.getStepSize() );
 				data.contexts[0]->setStepCount( data.contexts[0]->getStepCount() + 1 );
 				data.contexts[0]->reorderAtoms();
@@ -150,7 +152,7 @@ namespace OpenMM {
 				kNMLRejectMinimizationStep( &minmodule, data.contexts[0], *oldpos );
 			}
 
-			void StepKernel::LinearMinimize( OpenMM::ContextImpl &context, const Integrator &integrator, const double energy ) {
+			void StepKernel::LinearMinimize( OpenMM::ContextImpl &context, Integrator &integrator, const double energy ) {
 				ProjectionVectors( integrator );
 
 				lastPE = energy;

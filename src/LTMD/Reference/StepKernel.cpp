@@ -28,7 +28,7 @@ namespace OpenMM {
 
 			}
 
-			void StepKernel::initialize( const System &system, const Integrator &integrator ) {
+			void StepKernel::initialize( const System &system, Integrator &integrator ) {
 				mParticles = system.getNumParticles();
 
 				mMasses.resize( mParticles );
@@ -44,7 +44,7 @@ namespace OpenMM {
 				SimTKOpenMMUtilities::setRandomNumberSeed( ( unsigned int ) integrator.getRandomNumberSeed() );
 			}
 
-			void StepKernel::Integrate( ContextImpl &context, const Integrator &integrator ) {
+			void StepKernel::Integrate( ContextImpl &context, Integrator &integrator ) {
 				// Calculate Constants
 				const double deltaT = integrator.getStepSize();
 				const double friction = integrator.getFriction();
@@ -80,7 +80,7 @@ namespace OpenMM {
 				}
 			}
 
-			void StepKernel::UpdateTime( const Integrator &integrator ) {
+			void StepKernel::UpdateTime( Integrator &integrator ) {
 				data.time += integrator.getStepSize();
 				data.stepCount++;
 			}
@@ -107,7 +107,7 @@ namespace OpenMM {
 				mMinimizerScale *= 0.25;
 			}
 
-			void StepKernel::LinearMinimize( ContextImpl &context, const Integrator &integrator, const double energy ) {
+			void StepKernel::LinearMinimize( ContextImpl &context, Integrator &integrator, const double energy ) {
 				VectorArray &coordinates = extractPositions( context );
 				const VectorArray &forces = extractForces( context );
 
