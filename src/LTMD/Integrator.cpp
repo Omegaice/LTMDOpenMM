@@ -65,13 +65,26 @@ namespace OpenMM {
 
 			mSimpleMinimizations = 0;
 
-			for( mLastCompleted = 0; mLastCompleted < steps; ++mLastCompleted ) {
+			bool isIntegrate = true;
+			for( int i = 0; i < steps; i++) {
 				if( eigenvectors.size() == 0 || stepsSinceDiagonalize % mParameters.rediagFreq == 0 ) {
 					DiagonalizeMinimize();
 				}
 
-				IntegrateStep();
-				Minimize( mParameters.MaximumMinimizationIterations );
+				const double CurrentPE = context->calcForcesAndEnergy( true, true );
+				if( isIntegrate ){
+					isIntegrate = false;
+
+					IntegrateStep();
+					mLastCompleted++;
+				}else{
+					if( MetropolisTermination(CurrentPE, mMetropolisPE) ) {
+						isIntegrate = true;
+					}else{
+						mSimpleMinimizations++;
+						LinearMinimize(CurrentPE);
+					}
+				}
 			}
 
 			// Update Time
@@ -100,19 +113,6 @@ namespace OpenMM {
 
 		unsigned int Integrator::CompletedSteps() const {
 			return mLastCompleted;
-		}
-
-		void Integrator::Minimize( const unsigned int max ) {
-			double currentPE = context->calcForcesAndEnergy( true, true );
-
-			for( unsigned int i = 0; i < max; i++ ) {
-				if( MetropolisTermination(currentPE, mMetropolisPE) ) {
-					break;
-				}
-
-				mSimpleMinimizations++;
-				currentPE = LinearMinimize(currentPE);
-			}
 		}
 
 		const bool Integrator::MetropolisTermination(const double current, double& original) const {
@@ -177,19 +177,17 @@ namespace OpenMM {
 #endif
 		}
 
-		double Integrator::LinearMinimize( const double energy ) {
+		void Integrator::LinearMinimize( const double energy ) {
 #ifdef PROFILE_INTEGRATOR
 			timeval start, end;
 			gettimeofday( &start, 0 );
 #endif
 			( ( StepKernel & )( kernel.getImpl() ) ).LinearMinimize( *context, *this, energy );
-			double retVal = context->calcForcesAndEnergy( true, true );
 #ifdef PROFILE_INTEGRATOR
 			gettimeofday( &end, 0 );
 			double elapsed = ( end.tv_sec - start.tv_sec ) * 1000.0 + ( end.tv_usec - start.tv_usec ) / 1000.0;
 			std::cout << "[OpenMM::Integrator] Linear Minimize: " << elapsed << "ms" << std::endl;
 #endif
-			return retVal;
 		}
 	}
 }

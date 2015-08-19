@@ -128,7 +128,7 @@ namespace OpenMM {
 				void IntegrateStep();
 				void TimeAndCounterStep(const unsigned int steps);
 
-				double LinearMinimize( const double energy );
+				void LinearMinimize( const double energy );
 
 				void SaveStep();
 				void RevertStep();
