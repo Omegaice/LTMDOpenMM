@@ -58,6 +58,8 @@ namespace OpenMM {
 		}
 
 		void Integrator::step( int steps ) {
+			if( context->getTime() == 0.0 ) { mMetropolisPE = context->calcForcesAndEnergy( true, true ); }
+
 			timeval start, end;
 			gettimeofday( &start, 0 );
 
@@ -102,7 +104,6 @@ namespace OpenMM {
 				DiagonalizeMinimize();
 			}
 
-			if( mLastCompleted == 0 ) { mMetropolisPE = context->calcForcesAndEnergy( true, true ); }
 			IntegrateStep();
 			minimize( mParameters.MaximumMinimizationIterations );
 			TimeAndCounterStep();
