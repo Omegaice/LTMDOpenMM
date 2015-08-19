@@ -115,8 +115,6 @@ namespace OpenMM {
 				void step( int steps = 1 );
 
 				unsigned int CompletedSteps() const;
-
-				bool minimize( const unsigned int upperbound );
 			protected:
 				void initialize( OpenMM::ContextImpl &context );
 				std::vector<std::string> getKernelNames();
@@ -124,7 +122,7 @@ namespace OpenMM {
 				bool DoStep();
 				void DiagonalizeMinimize();
 
-				void Minimize( const unsigned int max, unsigned int &simpleSteps );
+				void Minimize( const unsigned int max );
 				const bool MetropolisTermination(const double current, double& initial) const;
 
 				// Kernel Functions

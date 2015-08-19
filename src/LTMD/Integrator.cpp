@@ -105,20 +105,12 @@ namespace OpenMM {
 			}
 
 			IntegrateStep();
-			minimize( mParameters.MaximumMinimizationIterations );
+			Minimize( mParameters.MaximumMinimizationIterations );
 			TimeAndCounterStep();
 			return true;
 		}
 
-		bool Integrator::minimize( const unsigned int upperbound ) {
-			unsigned int simple = 0;
-			Minimize( upperbound, simple );
-
-			return simple < upperbound;
-		}
-
-		void Integrator::Minimize( const unsigned int max, unsigned int &simpleSteps ) {
-			simpleSteps = 0;
+		void Integrator::Minimize( const unsigned int max ) {
 			double currentPE = context->calcForcesAndEnergy( true, true );
 
 			for( unsigned int i = 0; i < max; i++ ) {
@@ -126,11 +118,9 @@ namespace OpenMM {
 					break;
 				}
 
-				simpleSteps++;
+				mSimpleMinimizations++;
 				currentPE = LinearMinimize(currentPE);
 			}
-
-			mSimpleMinimizations += simpleSteps;
 		}
 
 		const bool Integrator::MetropolisTermination(const double current, double& original) const {
