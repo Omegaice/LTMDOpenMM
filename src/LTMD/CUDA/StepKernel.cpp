@@ -62,49 +62,33 @@ namespace OpenMM {
 				data.contexts[0]->getIntegrationUtilities().initRandomNumberGenerator( integrator.getRandomNumberSeed() );
 			}
 
-			void StepKernel::ProjectionVectors( Integrator &integrator ) {
-				//check if projection vectors changed
-				bool modesChanged = integrator.getProjVecChanged();
+			void StepKernel::UpdateEigenvectors(OpenMM::ContextImpl &context, const std::vector<std::vector<Vec3> >& vectors) {
+				mProjectionVectors = vectors.size();
 
-				//projection vectors changed or never allocated
-				if( modesChanged || modes == NULL ) {
-					int numModes = integrator.getNumProjectionVectors();
+				if( modes != NULL && modes->getSize() != mProjectionVectors * mParticles ) {
+					delete modes;
+					delete modeWeights;
+					modes = NULL;
+					modeWeights = NULL;
+				}
 
-					if( numModes == 0 ) {
-						throw OpenMMException( "Projection vector size is zero." );
-					}
+				if( modes == NULL ) {
+					modes = new CudaArray( *( data.contexts[0] ), mProjectionVectors * mParticles, sizeof( float4 ), "NormalModes" );
+					modeWeights = new CudaArray( *( data.contexts[0] ), ( mProjectionVectors > data.contexts[0]->getNumThreadBlocks() * data.contexts[0]->ThreadBlockSize ? mProjectionVectors : data.contexts[0]->getNumThreadBlocks() * data.contexts[0]->ThreadBlockSize ), sizeof( float ), "NormalModeWeights" );
+					pPosqP = new CudaArray( *( data.contexts[0] ), data.contexts[0]->getPaddedNumAtoms(), sizeof( float4 ), "MidIntegPositions" );
+				}
 
-					if( modes != NULL && modes->getSize() != numModes * mParticles ) {
-						delete modes;
-						delete modeWeights;
-						modes = NULL;
-						modeWeights = NULL;
-					}
-
-					if( modes == NULL ) {
-						modes = new CudaArray( *( data.contexts[0] ), numModes * mParticles, sizeof( float4 ), "NormalModes" );
-						modeWeights = new CudaArray( *( data.contexts[0] ), ( numModes > data.contexts[0]->getNumThreadBlocks() * data.contexts[0]->ThreadBlockSize ? numModes : data.contexts[0]->getNumThreadBlocks() * data.contexts[0]->ThreadBlockSize ), sizeof( float ), "NormalModeWeights" );
-						pPosqP = new CudaArray( *( data.contexts[0] ), data.contexts[0]->getPaddedNumAtoms(), sizeof( float4 ), "MidIntegPositions" );
-						modesChanged = true;
-					}
-					if( modesChanged ) {
-						int index = 0;
-						const std::vector<std::vector<Vec3> > &modeVectors = integrator.getProjectionVectors();
-						std::vector<float4> tmp( numModes * mParticles );
-						for( int i = 0; i < numModes; i++ ) {
-							for( int j = 0; j < mParticles; j++ ) {
-								tmp[index++] = make_float4( ( float ) modeVectors[i][j][0], ( float ) modeVectors[i][j][1], ( float ) modeVectors[i][j][2], 0.0f );
-							}
-						}
-						modes->upload( tmp );
-						integrator.SetProjectionChanged(false);
+				int index = 0;
+				std::vector<float4> tmp( mProjectionVectors * mParticles );
+				for( int i = 0; i < mProjectionVectors; i++ ) {
+					for( int j = 0; j < mParticles; j++ ) {
+						tmp[index++] = make_float4( ( float ) vectors[i][j][0], ( float ) vectors[i][j][1], ( float ) vectors[i][j][2], 0.0f );
 					}
 				}
+				modes->upload( tmp );
 			}
 
 			void StepKernel::Integrate( OpenMM::ContextImpl &context, Integrator &integrator ) {
-				ProjectionVectors( integrator );
-
 				// Calculate Constants
 				const double friction = integrator.getFriction();
 
@@ -115,7 +99,7 @@ namespace OpenMM {
 							integrator.getStepSize(),
 							friction == 0.0f ? 0.0f : 1.0f / friction,
 							( float )( BOLTZ * integrator.getTemperature() ),
-							integrator.getNumProjectionVectors(), kIterations, *modes, *modeWeights, *NoiseValues );	// TMC setting parameters for this
+							mProjectionVectors, kIterations, *modes, *modeWeights, *NoiseValues );	// TMC setting parameters for this
 			}
 
 			void StepKernel::UpdateTime( Integrator &integrator, const unsigned int steps ) {
@@ -124,8 +108,7 @@ namespace OpenMM {
 			}
 
 			void StepKernel::LinearMinimize( OpenMM::ContextImpl &context, Integrator &integrator, const double energy ) {
-				ProjectionVectors( integrator );
-				kNMLLinearMinimize( &linmodule, data.contexts[0], integrator.getNumProjectionVectors(), integrator.getMaxEigenvalue(), *pPosqP, *modes, *modeWeights );
+				kNMLLinearMinimize( &linmodule, data.contexts[0], mProjectionVectors, integrator.getMaxEigenvalue(), *pPosqP, *modes, *modeWeights );
 			}
 		}
 	}

@@ -51,6 +51,7 @@ namespace OpenMM {
 					 */
 					void initialize( const OpenMM::System &system, Integrator &integrator );
 
+					void UpdateEigenvectors(OpenMM::ContextImpl &context, const std::vector<std::vector<Vec3> >& vectors);
 					void Integrate( OpenMM::ContextImpl &context, Integrator &integrator );
 					void UpdateTime( Integrator &integrator, const unsigned int steps );
 

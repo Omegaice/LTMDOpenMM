@@ -53,12 +53,11 @@ namespace OpenMM {
 			return names;
 		}
 
-		void Integrator::SetProjectionChanged( bool value ) {
-			eigVecChanged = value;
-		}
-
 		void Integrator::step( int steps ) {
-			if( context->getTime() == 0.0 ) { mMetropolisPE = context->calcForcesAndEnergy( true, true ); }
+			if( context->getTime() == 0.0 ) {
+				computeProjectionVectors();
+				mMetropolisPE = context->calcForcesAndEnergy( true, true );
+			}
 
 			timeval start, end;
 			gettimeofday( &start, 0 );
@@ -67,8 +66,8 @@ namespace OpenMM {
 
 			bool isIntegrate = true;
 			for( int i = 0; i < steps; i++) {
-				if( eigenvectors.size() == 0 || stepsSinceDiagonalize % mParameters.rediagFreq == 0 ) {
-					DiagonalizeMinimize();
+				if( stepsSinceDiagonalize % mParameters.rediagFreq == 0 ) {
+					computeProjectionVectors();
 				}
 
 				const double CurrentPE = context->calcForcesAndEnergy( true, true );
@@ -130,17 +129,13 @@ namespace OpenMM {
 			return false;
 		}
 
-		void Integrator::DiagonalizeMinimize() {
-			computeProjectionVectors();
-		}
-
 		void Integrator::computeProjectionVectors() {
 #ifdef PROFILE_INTEGRATOR
 			timeval start, end;
 			gettimeofday( &start, 0 );
 #endif
 			mAnalysis->computeEigenvectorsFull( context->getOwner(), mParameters );
-			setProjectionVectors( mAnalysis->getEigenvectors() );
+			( ( StepKernel & )( kernel.getImpl() ) ).UpdateEigenvectors( *context, mAnalysis->getEigenvectors() );
 			stepsSinceDiagonalize = 0;
 #ifdef PROFILE_INTEGRATOR
 			gettimeofday( &end, 0 );

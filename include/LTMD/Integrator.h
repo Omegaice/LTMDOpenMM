@@ -54,32 +54,12 @@ namespace OpenMM {
 					friction = coeff;
 				}
 
-				unsigned int getNumProjectionVectors() const {
-					return eigenvectors.size();
-				}
-
 				double getMinimumLimit() const {
 					return minimumLimit;
 				}
 
 				void setMinimumLimit( double limit ) {
 					minimumLimit = limit;
-				}
-
-				bool getProjVecChanged() const {
-					return eigVecChanged;
-				}
-
-				const std::vector<std::vector<OpenMM::Vec3> > &getProjectionVectors() const {
-					return eigenvectors;
-				}
-
-				void SetProjectionChanged( bool value );
-
-				void setProjectionVectors( const std::vector<std::vector<OpenMM::Vec3> > &vectors ) {
-					eigenvectors = vectors;
-					SetProjectionChanged( true );
-					stepsSinceDiagonalize = 0;
 				}
 
 				double getMaxEigenvalue() const {
@@ -119,8 +99,6 @@ namespace OpenMM {
 				void initialize( OpenMM::ContextImpl &context );
 				std::vector<std::string> getKernelNames();
 			private:
-				void DiagonalizeMinimize();
-
 				void Minimize( const unsigned int max );
 				const bool MetropolisTermination(const double current, double& initial) const;
 
@@ -138,8 +116,6 @@ namespace OpenMM {
 				unsigned int mLastCompleted;
 				void computeProjectionVectors();
 				double maxEigenvalue;
-				std::vector<std::vector<OpenMM::Vec3> > eigenvectors;
-				bool eigVecChanged;
 				double minimumLimit;
 				double temperature, friction;
 				double mMetropolisPE;

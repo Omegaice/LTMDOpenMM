@@ -44,6 +44,23 @@ namespace OpenMM {
 				SimTKOpenMMUtilities::setRandomNumberSeed( ( unsigned int ) integrator.getRandomNumberSeed() );
 			}
 
+			void StepKernel::UpdateEigenvectors(OpenMM::ContextImpl &context, const std::vector<std::vector<Vec3> >& vectors) {
+				if( mProjectionVectors.size() == 0 ) {
+					const unsigned int size = vectors.size() * mParticles * 3;
+
+					mProjectionVectors.resize( size );
+				}
+
+				int index = 0;
+				for( unsigned int i = 0; i < vectors.size(); i++ ) {
+					for( unsigned int j = 0; j < vectors[i].size(); j++ ) {
+						mProjectionVectors[index++] = vectors[i][j][0];
+						mProjectionVectors[index++] = vectors[i][j][1];
+						mProjectionVectors[index++] = vectors[i][j][2];
+					}
+				}
+			}
+
 			void StepKernel::Integrate( ContextImpl &context, Integrator &integrator ) {
 				// Calculate Constants
 				const double deltaT = integrator.getStepSize();
@@ -142,27 +159,6 @@ namespace OpenMM {
 			}
 
 			void StepKernel::Project( const Integrator &integrator, const VectorArray &in, VectorArray &out, const DoubleArray &scale, const DoubleArray &inverseScale, const bool compliment ) {
-				unsigned int vectors = integrator.getNumProjectionVectors();
-
-				if( mProjectionVectors.size() == 0 || integrator.getProjVecChanged() ) {
-					if( mProjectionVectors.size() == 0 ) {
-						const unsigned int size = vectors * mParticles * 3;
-
-						mProjectionVectors.resize( size );
-					}
-
-					const std::vector<std::vector<OpenMM::Vec3> > &dProjectionVectors = integrator.getProjectionVectors();
-
-					int index = 0;
-					for( unsigned int i = 0; i < dProjectionVectors.size(); i++ ) {
-						for( unsigned int j = 0; j < dProjectionVectors[i].size(); j++ ) {
-							mProjectionVectors[index++] = dProjectionVectors[i][j][0];
-							mProjectionVectors[index++] = dProjectionVectors[i][j][1];
-							mProjectionVectors[index++] = dProjectionVectors[i][j][2];
-						}
-					}
-				}
-
 				CopyArray( in, out );
 				ScaleArray( scale, out );
 
@@ -182,8 +178,8 @@ namespace OpenMM {
 				//so tmpC_i = \sum_{j=1}^n Q_{j,i} outArray_j
 				//Q_{j,i}=_projectionVectors[j * numberOfAtoms * 3 + i]
 
-				DoubleArray tmpC( vectors );
-				for( unsigned int i = 0; i < vectors; i++ ) {
+				DoubleArray tmpC( mProjectionVectors.size() );
+				for( unsigned int i = 0; i < mProjectionVectors.size(); i++ ) {
 
 					tmpC[i] = 0.0;
 					for( unsigned int j = 0; j < _3N; j++ ) {
@@ -205,11 +201,11 @@ namespace OpenMM {
 					if( !compliment ) {
 						out[ii][jj] = 0.0;
 
-						for( unsigned int j = 0; j < vectors; j++ ) {
+						for( unsigned int j = 0; j < mProjectionVectors.size(); j++ ) {
 							out[ii][jj] += mProjectionVectors[i + j * _3N] * tmpC[j];
 						}
 					} else {
-						for( unsigned int j = 0; j < vectors; j++ ) {
+						for( unsigned int j = 0; j < mProjectionVectors.size(); j++ ) {
 							out[ii][jj] -= mProjectionVectors[i + j * _3N] * tmpC[j];
 						}
 
