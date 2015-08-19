@@ -57,7 +57,6 @@ namespace OpenMM {
 					CUmodule minmodule;
 					CUmodule linmodule;
 					CUmodule quadmodule;
-					CUmodule fastmodule;
 					CUmodule updatemodule;
 			};
 		}

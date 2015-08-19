@@ -22,7 +22,6 @@ void kNMLRejectMinimizationStep( CUmodule *module, CudaContext *gpu, CudaArray &
 void kNMLAcceptMinimizationStep( CUmodule *module, CudaContext *gpu, CudaArray &oldpos );
 void kNMLLinearMinimize( CUmodule *module, CudaContext *gpu, int numModes, float maxEigenvalue, CudaArray &oldpos, CudaArray &modes, CudaArray &modeWeights );
 void kNMLQuadraticMinimize( CUmodule *module, CudaContext *gpu, float maxEigenvalue, float currentPE, float lastPE, CudaArray &oldpos, CudaArray &slopeBuffer, CudaArray &lambdaval );
-void kFastNoise( CUmodule *module, CudaContext *cu, int numModes, float kT, int &iterations, CudaArray &modes, CudaArray &modeWeights, float maxEigenvalue, CudaArray &noiseVal, CudaArray &oldpos, float stepSize );
 
 double drand() { /* uniform distribution, (0..1] */
 	return ( rand() + 1.0 ) / ( RAND_MAX + 1.0 );
@@ -60,12 +59,7 @@ namespace OpenMM {
 				minmodule = data.contexts[0]->createModule( KernelSources::minimizationSteps );
 				linmodule = data.contexts[0]->createModule( KernelSources::linearMinimizers );
 				quadmodule = data.contexts[0]->createModule( KernelSources::quadraticMinimizers );
-#ifdef FAST_NOISE
-				fastmodule = data.contexts[0]->createModule( KernelSources::fastnoises, "-DFAST_NOISE=1" );
-				updatemodule = data.contexts[0]->createModule( KernelSources::NMLupdates, "-DFAST_NOISE=1" );
-#else
-				updatemodule = data.contexts[0]->createModule( KernelSources::NMLupdates, "-DFAST_NOISE=0" );
-#endif
+				updatemodule = data.contexts[0]->createModule( KernelSources::NMLupdates );
 
 				MinimizeLambda = new CudaArray( *( data.contexts[0] ), 1, sizeof( float ), "MinimizeLambda" );
 				//data.contexts[0]->getPlatformData().initializeContexts(system);
@@ -135,13 +129,7 @@ namespace OpenMM {
 			void StepKernel::Integrate( OpenMM::ContextImpl &context, const Integrator &integrator ) {
 				ProjectionVectors( integrator );
 
-#ifdef FAST_NOISE
-				// Add noise for step
-				kFastNoise( &fastmodule, data.contexts[0], integrator.getNumProjectionVectors(), ( float )( BOLTZ * integrator.getTemperature() ), iterations, *modes, *modeWeights, integrator.getMaxEigenvalue(), *NoiseValues, *pPosqP, integrator.getStepSize() );
-#endif
-
 				// Calculate Constants
-
 				const double friction = integrator.getFriction();
 
 				context.updateContextState();

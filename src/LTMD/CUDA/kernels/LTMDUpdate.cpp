@@ -36,26 +36,6 @@ void kNMLUpdate( CUmodule *module, CudaContext *cu, float deltaT, float tau, flo
 
 }
 
-#ifdef FAST_NOISE
-void kFastNoise( CUmodule *module, CudaContext *cu, int numModes, float kT, int &iterations, CudaArray &modes, CudaArray &modeWeights, float maxEigenvalue, CudaArray &noiseVal, CudaArray &oldpos, float stepSize ) {
-	int atoms = cu->getNumAtoms();
-	int paddednumatoms = cu->getPaddedNumAtoms();
-	int randomIndex = cu->getIntegrationUtilities().prepareRandomNumbers(cu->getPaddedNumAtoms());
-
-	CUfunction fastnoise1Kernel = cu->getKernel( *module, "kFastNoise1_kernel" );
-	void *fastnoise1Args[] = {
-		&atoms, &paddednumatoms, &numModes, &kT, &oldpos.getDevicePointer(), &cu->getVelm().getDevicePointer(), &modes.getDevicePointer(), &modeWeights.getDevicePointer(), &cu->getIntegrationUtilities().getRandom().getDevicePointer(), &randomIndex, &maxEigenvalue, &stepSize
-	};
-	cu->executeKernel( fastnoise1Kernel, fastnoise1Args, cu->getNumThreadBlocks()*cu->ThreadBlockSize, cu->ThreadBlockSize, cu->ThreadBlockSize * sizeof( float ) );
-
-	CUfunction fastnoise2Kernel = cu->getKernel( *module, "kFastNoise2_kernel" );
-	void *fastnoise2Args[] = {
-		&atoms, &numModes, &cu->getPosq().getDevicePointer(), &noiseVal.getDevicePointer(), &cu->getVelm().getDevicePointer(), &modes.getDevicePointer(), &modeWeights.getDevicePointer()
-	};
-	cu->executeKernel( fastnoise2Kernel, fastnoise2Args, cu->getNumThreadBlocks()*cu->ThreadBlockSize, cu->ThreadBlockSize, numModes * sizeof( float ) );
-}
-#endif
-
 void kNMLRejectMinimizationStep( CUmodule *module, CudaContext *cu, CudaArray &oldpos ) {
 	int atoms = cu->getNumAtoms();
 
