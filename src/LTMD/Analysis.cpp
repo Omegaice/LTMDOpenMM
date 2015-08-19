@@ -46,12 +46,16 @@ namespace OpenMM {
 
 		bool sort_func( const EigenvalueColumn &a, const EigenvalueColumn &b ) {
 			if( std::fabs( a.first - b.first ) < 1e-8 ) {
-				if( a.second <= b.second ) {
+				if( a.second < b.second ) {
 					return true;
+				}else{
+					return false;
 				}
 			} else {
 				if( a.first < b.first ) {
 					return true;
+				}else{
+					return false;
 				}
 			}
 
