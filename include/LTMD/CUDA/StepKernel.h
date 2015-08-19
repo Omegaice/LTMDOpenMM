@@ -36,7 +36,6 @@ namespace OpenMM {
 					void RejectStep( OpenMM::ContextImpl &context );
 
 					void LinearMinimize( OpenMM::ContextImpl &context, const Integrator &integrator, const double energy );
-					double QuadraticMinimize( OpenMM::ContextImpl &context, const Integrator &integrator, const double energy );
 					virtual double computeKineticEnergy( OpenMM::ContextImpl &context, const Integrator &integrator ) {
 						return data.contexts[0]->getIntegrationUtilities().computeKineticEnergy( 0.5 * integrator.getStepSize() );
 					}
@@ -56,7 +55,6 @@ namespace OpenMM {
 					int kIterations;
 					CUmodule minmodule;
 					CUmodule linmodule;
-					CUmodule quadmodule;
 					CUmodule updatemodule;
 			};
 		}

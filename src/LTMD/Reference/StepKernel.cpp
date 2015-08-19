@@ -137,55 +137,6 @@ namespace OpenMM {
 				}
 			}
 
-			double StepKernel::QuadraticMinimize( ContextImpl &context, const Integrator &integrator, const double energy ) {
-				VectorArray &coordinates = extractPositions( context );
-				const VectorArray &forces = extractForces( context );
-
-				//Get quadratic 'line search' value
-				double lambda = 1.0 / integrator.getMaxEigenvalue();
-				const double oldLambda = lambda;
-
-				//Solve quadratic for slope at new point
-				//get slope dPE/d\lambda for quadratic, just equal to minus dot product of 'proposed position move' and forces (=-\nabla PE)
-				double newSlope = 0.0;
-
-				for( unsigned int i = 0; i < mParticles; i++ ) {
-					for( unsigned int j = 0; j < 3; j++ ) {
-						newSlope -= mXPrime[i][j] * forces[i][j] * mInverseMasses[i];
-					}
-				}
-
-				//solve for minimum for quadratic fit using two PE vales and the slope with /lambda=0
-				//for 'newSlope' use PE=a(\lambda_e-\lambda)^2+b(\lambda_e-\lambda)+c, \lambda_e is 1/maxEig.
-				const double a = ( ( ( mPreviousEnergy - energy ) / oldLambda + newSlope ) / oldLambda );
-
-				//calculate \lambda at minimum of quadratic fit
-				if( a != 0.0 ) {
-					const double b = newSlope - 2.0 * a * oldLambda;
-					lambda = -b / ( 2.0 * a );
-				} else {
-					lambda = 0.5 * oldLambda;
-				}
-
-				//test if lambda negative, if so just use smaller lambda
-				if( lambda <= 0.0 ) {
-					lambda = 0.5 * oldLambda;
-				}
-
-				const double dlambda = lambda - oldLambda;
-
-				//Remove previous position update (-oldLambda) and add new move (lambda)
-				for( unsigned int i = 0; i < mParticles; i++ ) {
-					const double factor = mInverseMasses[i] * dlambda;
-
-					coordinates[i][0] += factor * mXPrime[i][0];
-					coordinates[i][1] += factor * mXPrime[i][1];
-					coordinates[i][2] += factor * mXPrime[i][2];
-				}
-
-				return lambda;
-			}
-
 			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			// Find forces OR positions inside subspace (defined as the span of the 'eigenvectors' Q)
 			// Take 'array' as input, 'outArray' as output (may be the same vector).

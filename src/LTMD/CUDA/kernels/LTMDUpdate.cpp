@@ -65,17 +65,3 @@ void kNMLLinearMinimize( CUmodule *module, CudaContext *cu, int numModes, float 
 	void *linmin2Args[] = {&atoms, &paddedatoms, &numModes, &oneoverEig, &cu->getPosq().getDevicePointer(), &oldpos.getDevicePointer(), &cu->getVelm().getDevicePointer(), &cu->getForce().getDevicePointer(), &modes.getDevicePointer(), &modeWeights.getDevicePointer()};
 	cu->executeKernel( linmin2Kernel, linmin2Args, cu->getNumThreadBlocks()*cu->ThreadBlockSize, cu->ThreadBlockSize, numModes * sizeof( float ) );
 }
-
-void kNMLQuadraticMinimize( CUmodule *module, CudaContext *cu, float maxEigenvalue, float currentPE, float lastPE, CudaArray &oldpos, CudaArray &slopeBuffer, CudaArray &lambdaval ) {
-	int atoms = cu->getNumAtoms();
-	int paddedatoms = cu->getPaddedNumAtoms();
-	float oneoverEig = 1.0f / maxEigenvalue;
-
-	CUfunction quadmin1Kernel = cu->getKernel( *module, "kNMLQuadraticMinimize1_kernel" );
-	void *quadmin1Args[] = {&atoms, &paddedatoms, &oldpos.getDevicePointer(),&cu->getVelm().getDevicePointer(), &cu->getForce().getDevicePointer(),&slopeBuffer.getDevicePointer()};
-	cu->executeKernel( quadmin1Kernel, quadmin1Args, cu->getNumThreadBlocks()*cu->ThreadBlockSize, cu->ThreadBlockSize, cu->ThreadBlockSize * sizeof( float ) );
-
-	CUfunction quadmin2Kernel = cu->getKernel( *module, "kNMLQuadraticMinimize2_kernel" );
-	void *quadmin2Args[] = {&atoms, &currentPE, &lastPE, &oneoverEig, &cu->getPosq().getDevicePointer(), &oldpos.getDevicePointer(), &cu->getVelm().getDevicePointer(), &slopeBuffer.getDevicePointer(), &lambdaval.getDevicePointer()};
-	cu->executeKernel( quadmin2Kernel, quadmin2Args, cu->getNumThreadBlocks()*cu->ThreadBlockSize, cu->ThreadBlockSize, cu->getNumThreadBlocks()*cu->ThreadBlockSize * sizeof( float ) );
-}

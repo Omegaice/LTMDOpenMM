@@ -21,7 +21,6 @@ void kNMLUpdate( CUmodule *module, CudaContext *gpu, float deltaT, float tau, fl
 void kNMLRejectMinimizationStep( CUmodule *module, CudaContext *gpu, CudaArray &oldpos );
 void kNMLAcceptMinimizationStep( CUmodule *module, CudaContext *gpu, CudaArray &oldpos );
 void kNMLLinearMinimize( CUmodule *module, CudaContext *gpu, int numModes, float maxEigenvalue, CudaArray &oldpos, CudaArray &modes, CudaArray &modeWeights );
-void kNMLQuadraticMinimize( CUmodule *module, CudaContext *gpu, float maxEigenvalue, float currentPE, float lastPE, CudaArray &oldpos, CudaArray &slopeBuffer, CudaArray &lambdaval );
 
 double drand() { /* uniform distribution, (0..1] */
 	return ( rand() + 1.0 ) / ( RAND_MAX + 1.0 );
@@ -35,10 +34,7 @@ namespace OpenMM {
 	namespace LTMD {
 		namespace CUDA {
 			StepKernel::StepKernel( std::string name, const Platform &platform, CudaPlatform::PlatformData &data ) : LTMD::StepKernel( name, platform ),
-				data( data ), modes( NULL ), modeWeights( NULL ), MinimizeLambda( 0 ) {
-
-				//MinimizeLambda = new CUDAStream<float>( 1, 1, "MinimizeLambda" );
-				//MinimizeLambda = new CudaArray( *(data.contexts[0]), 1, sizeof(float), "MinimizeLambda" );
+				data( data ), modes( NULL ), modeWeights( NULL ) {
 				iterations = 0;
 				kIterations = 0;
 			}
@@ -58,10 +54,8 @@ namespace OpenMM {
 				data.contexts[0]->initialize();
 				minmodule = data.contexts[0]->createModule( KernelSources::minimizationSteps );
 				linmodule = data.contexts[0]->createModule( KernelSources::linearMinimizers );
-				quadmodule = data.contexts[0]->createModule( KernelSources::quadraticMinimizers );
 				updatemodule = data.contexts[0]->createModule( KernelSources::NMLupdates );
 
-				MinimizeLambda = new CudaArray( *( data.contexts[0] ), 1, sizeof( float ), "MinimizeLambda" );
 				//data.contexts[0]->getPlatformData().initializeContexts(system);
 				mParticles = data.contexts[0]->getNumAtoms();
 				//NoiseValues = new CUDAStream<float4>( 1, mParticles, "NoiseValues" );
@@ -161,17 +155,6 @@ namespace OpenMM {
 
 				lastPE = energy;
 				kNMLLinearMinimize( &linmodule, data.contexts[0], integrator.getNumProjectionVectors(), integrator.getMaxEigenvalue(), *pPosqP, *modes, *modeWeights );
-			}
-
-			double StepKernel::QuadraticMinimize( OpenMM::ContextImpl &context, const Integrator &integrator, const double energy ) {
-				ProjectionVectors( integrator );
-
-				kNMLQuadraticMinimize( &quadmodule, data.contexts[0], integrator.getMaxEigenvalue(), energy, lastPE, *pPosqP, *modeWeights, *MinimizeLambda );
-				std::vector<float> tmp;
-				tmp.resize( 1 );
-				MinimizeLambda->download( tmp );
-
-				return tmp[0];
 			}
 		}
 	}

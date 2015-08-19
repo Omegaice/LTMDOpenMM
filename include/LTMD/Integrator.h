@@ -128,7 +128,7 @@ namespace OpenMM {
 				bool DoStep();
 				void DiagonalizeMinimize();
 
-				void Minimize( const unsigned int max, unsigned int &simpleSteps, unsigned int &quadraticSteps );
+				void Minimize( const unsigned int max, unsigned int &simpleSteps );
 				const bool MetropolisTermination(const double current, double& initial) const;
 
 				// Kernel Functions
@@ -136,13 +136,12 @@ namespace OpenMM {
 				void TimeAndCounterStep();
 
 				double LinearMinimize( const double energy );
-				double QuadraticMinimize( const double energy, double &lambda );
 
 				void SaveStep();
 				void RevertStep();
 			private:
 				//std::vector<Vec3> oldPos; // TMC this won't work in CPU memory with GPU kernels...
-				unsigned int mSimpleMinimizations, mQuadraticMinimizations;
+				unsigned int mSimpleMinimizations;
 				unsigned int mLastCompleted;
 				void computeProjectionVectors();
 				double maxEigenvalue;

@@ -36,7 +36,6 @@ namespace OpenMM {
 				virtual void RejectStep( OpenMM::ContextImpl &context ) = 0;
 
 				virtual void LinearMinimize( OpenMM::ContextImpl &context, const Integrator &integrator, const double energy ) = 0;
-				virtual double QuadraticMinimize( OpenMM::ContextImpl &context, const Integrator &integrator, const double energy ) = 0;
 		};
 	}
 }

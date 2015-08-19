@@ -63,7 +63,6 @@ namespace OpenMM {
 			gettimeofday( &start, 0 );
 
 			mSimpleMinimizations = 0;
-			mQuadraticMinimizations = 0;
 
 			for( mLastCompleted = 0; mLastCompleted < steps; ++mLastCompleted ) {
 				if( DoStep() == false ) {
@@ -75,16 +74,16 @@ namespace OpenMM {
 			context->setTime( context->getTime() + getStepSize() * mLastCompleted );
 
 			// Print Minimizations
-			const unsigned int total = mSimpleMinimizations + mQuadraticMinimizations;
+			const unsigned int total = mSimpleMinimizations;
 
 			const double averageSimple = ( double )mSimpleMinimizations / ( double )mLastCompleted;
-			const double averageQuadratic = ( double )mQuadraticMinimizations / ( double )mLastCompleted;
 			const double averageTotal = ( double )total / ( double )mLastCompleted;
 
 			std::cout << "[OpenMM::Minimize] " << total << " total minimizations( "
-					  << mSimpleMinimizations << " simple, " << mQuadraticMinimizations << " quadratic ). "
-					  << averageTotal << " per-step minimizations( " << averageSimple << " simple, "
-					  << averageQuadratic << " quadratic ). Steps: " << mLastCompleted << std::endl;
+					  << mSimpleMinimizations << " simple )."
+					  << averageTotal << " per-step minimizations( "
+					  << averageSimple << " simple ). Steps: "
+					  << mLastCompleted << std::endl;
 
 			gettimeofday( &end, 0 );
 			double elapsed = ( end.tv_sec - start.tv_sec ) * 1000.0 + ( end.tv_usec - start.tv_usec ) / 1000.0;
@@ -126,22 +125,22 @@ namespace OpenMM {
 		}
 
 		bool Integrator::minimize( const unsigned int upperbound ) {
-			unsigned int simple = 0, quadratic = 0;
-			Minimize( upperbound, simple, quadratic );
+			unsigned int simple = 0;
+			Minimize( upperbound, simple );
 
-			return ( ( simple + quadratic ) < upperbound );
+			return ( simple < upperbound );
 		}
 
 		bool Integrator::minimize( const unsigned int upperbound, const unsigned int lowerbound ) {
-			unsigned int simple = 0, quadratic = 0;
-			Minimize( upperbound, simple, quadratic );
+			unsigned int simple = 0;
+			Minimize( upperbound, simple );
 
-			std::cout << "Minimizations: " << simple << " " << quadratic << " Bound: " << lowerbound << std::endl;
+			std::cout << "Minimizations: " << simple << " Bound: " << lowerbound << std::endl;
 
-			return ( ( simple + quadratic ) < lowerbound );
+			return ( simple < lowerbound );
 		}
 
-		void Integrator::Minimize( const unsigned int max, unsigned int &simpleSteps, unsigned int &quadraticSteps ) {
+		void Integrator::Minimize( const unsigned int max, unsigned int &simpleSteps ) {
 			const double eigStore = maxEigenvalue;
 			if( !mParameters.ShouldProtoMolDiagonalize && eigenvectors.size() == 0 ) {
 				computeProjectionVectors();
@@ -154,7 +153,6 @@ namespace OpenMM {
 
 			//context->getPositions(oldPos); // I need to get old positions here
 			simpleSteps = 0;
-			quadraticSteps = 0;
 
 			for( unsigned int i = 0; i < max; i++ ) {
 				SetProjectionChanged( false );
@@ -165,23 +163,6 @@ namespace OpenMM {
 
 				simpleSteps++;
 				double currentPE = LinearMinimize( initialPE );
-				if( mParameters.isAlwaysQuadratic || currentPE > initialPE ) {
-					quadraticSteps++;
-
-					double lambda = 0.0;
-					currentPE = QuadraticMinimize( currentPE, lambda );
-					if( currentPE > initialPE ) {
-						std::cout << "Quadratic Minimization Failed Energy Test [" << currentPE << ", " << initialPE << "] - Forcing Rediagonalization" << std::endl;
-						if( !mParameters.ShouldProtoMolDiagonalize ) computeProjectionVectors();
-						break;
-					} else {
-						if( mParameters.ShouldForceRediagOnQuadraticLambda && lambda < 1.0 / maxEigenvalue ) {
-							std::cout << "Quadratic Minimization Failed Lambda Test [" << lambda << ", " << 1.0 / maxEigenvalue << "] - Forcing Rediagonalization" << std::endl;
-							if( !mParameters.ShouldProtoMolDiagonalize ) computeProjectionVectors();
-							break;
-						}
-					}
-				}
 
 				if( mParameters.ShouldUseMetropolisMinimization ) {
 					if( MetropolisTermination(currentPE, mMetropolisPE) ) {
@@ -206,7 +187,6 @@ namespace OpenMM {
 			}
 
 			mSimpleMinimizations += simpleSteps;
-			mQuadraticMinimizations += quadraticSteps;
 
 			maxEigenvalue = eigStore;
 		}
@@ -290,24 +270,6 @@ namespace OpenMM {
 #endif
 		return retVal;
 }
-
-		double Integrator::QuadraticMinimize( const double energy, double &lambda ) {
-#ifdef PROFILE_INTEGRATOR
-			timeval start, end;
-			gettimeofday( &start, 0 );
-#endif
-			lambda = ( ( StepKernel & )( kernel.getImpl() ) ).QuadraticMinimize( *context, *this, energy );
-#ifdef KERNEL_VALIDATION
-			std::cout << "[OpenMM::Integrator::Minimize] Lambda: " << lambda << " Ratio: " << ( lambda / maxEigenvalue ) << std::endl;
-#endif
-			double retVal = context->calcForcesAndEnergy( true, true );
-#ifdef PROFILE_INTEGRATOR
-			gettimeofday( &end, 0 );
-			double elapsed = ( end.tv_sec - start.tv_sec ) * 1000.0 + ( end.tv_usec - start.tv_usec ) / 1000.0;
-			std::cout << "[OpenMM::Integrator] Quadratic Minimize: " << elapsed << "ms" << std::endl;
-#endif
-			return retVal;
-		}
 
 		void Integrator::SaveStep() {
 #ifdef PROFILE_INTEGRATOR
