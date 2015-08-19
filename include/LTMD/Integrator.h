@@ -119,7 +119,6 @@ namespace OpenMM {
 				void initialize( OpenMM::ContextImpl &context );
 				std::vector<std::string> getKernelNames();
 			private:
-				bool DoStep();
 				void DiagonalizeMinimize();
 
 				void Minimize( const unsigned int max );

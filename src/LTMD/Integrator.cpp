@@ -66,9 +66,13 @@ namespace OpenMM {
 			mSimpleMinimizations = 0;
 
 			for( mLastCompleted = 0; mLastCompleted < steps; ++mLastCompleted ) {
-				if( DoStep() == false ) {
-					break;
+				if( eigenvectors.size() == 0 || stepsSinceDiagonalize % mParameters.rediagFreq == 0 ) {
+					DiagonalizeMinimize();
 				}
+
+				IntegrateStep();
+				Minimize( mParameters.MaximumMinimizationIterations );
+				TimeAndCounterStep();
 			}
 
 			// Update Time
@@ -97,17 +101,6 @@ namespace OpenMM {
 
 		unsigned int Integrator::CompletedSteps() const {
 			return mLastCompleted;
-		}
-
-		bool Integrator::DoStep() {
-			if( eigenvectors.size() == 0 || stepsSinceDiagonalize % mParameters.rediagFreq == 0 ) {
-				DiagonalizeMinimize();
-			}
-
-			IntegrateStep();
-			Minimize( mParameters.MaximumMinimizationIterations );
-			TimeAndCounterStep();
-			return true;
 		}
 
 		void Integrator::Minimize( const unsigned int max ) {
