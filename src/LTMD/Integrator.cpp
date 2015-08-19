@@ -104,15 +104,7 @@ namespace OpenMM {
 
 			if(mLastCompleted == 0) mMetropolisPE = context->calcForcesAndEnergy( true, true );
 			IntegrateStep();
-			if( !minimize( mParameters.MaximumMinimizationIterations ) ) {
-				if( mParameters.ShouldForceRediagOnMinFail ) {
-					if( mParameters.ShouldProtoMolDiagonalize ) {
-						return false;
-					} else {
-						DiagonalizeMinimize();
-					}
-				}
-			}
+			minimize( mParameters.MaximumMinimizationIterations );
 			TimeAndCounterStep();
 			return true;
 		}
@@ -125,10 +117,6 @@ namespace OpenMM {
 		}
 
 		void Integrator::Minimize( const unsigned int max, unsigned int &simpleSteps ) {
-			if( !mParameters.ShouldProtoMolDiagonalize && eigenvectors.size() == 0 ) {
-				computeProjectionVectors();
-			}
-
 			simpleSteps = 0;
 			double currentPE = context->calcForcesAndEnergy( true, true );
 
@@ -160,9 +148,7 @@ namespace OpenMM {
 		}
 
 		void Integrator::DiagonalizeMinimize() {
-			if( !mParameters.ShouldProtoMolDiagonalize ) {
-				computeProjectionVectors();
-			}
+			computeProjectionVectors();
 		}
 
 		void Integrator::computeProjectionVectors() {
