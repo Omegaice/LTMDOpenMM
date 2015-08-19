@@ -107,7 +107,7 @@ namespace OpenMM {
 			}
 			stepsSinceDiagonalize++;
 
-			mMetropolisPE = context->calcForcesAndEnergy( true, true );
+			if(mLastCompleted == 0) mMetropolisPE = context->calcForcesAndEnergy( true, true );
 			IntegrateStep();
 			SetProjectionChanged( false );
 			if( !minimize( mParameters.MaximumMinimizationIterations ) ) {
@@ -160,11 +160,13 @@ namespace OpenMM {
 				SetProjectionChanged( false );
 
 				if( initialPE < mMetropolisPE ) {
+					mMetropolisPE = initialPE;
 					break;
 				}
 
 				const double prob = exp(-( 1.0 / ( BOLTZ * temperature )) * ( initialPE - mMetropolisPE ));
 				if( SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() < prob ) {
+					mMetropolisPE = initialPE;
 					break;
 				}
 
@@ -190,11 +192,13 @@ namespace OpenMM {
 
 				if( mParameters.ShouldUseMetropolisMinimization ) {
 					if( currentPE < mMetropolisPE ) {
+						mMetropolisPE = currentPE;
 						break;
 					}
 
 					const double prob = exp(-( 1.0 / ( BOLTZ * temperature )) * ( currentPE - mMetropolisPE ));
 					if( SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() < prob ) {
+						mMetropolisPE = currentPE;
 						break;
 					}
 				} else {
