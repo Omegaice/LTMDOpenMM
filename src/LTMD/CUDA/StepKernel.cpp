@@ -118,10 +118,9 @@ namespace OpenMM {
 							integrator.getNumProjectionVectors(), kIterations, *modes, *modeWeights, *NoiseValues );	// TMC setting parameters for this
 			}
 
-			void StepKernel::UpdateTime( Integrator &integrator ) {
-				data.contexts[0]->setTime( data.contexts[0]->getTime() + integrator.getStepSize() );
-				data.contexts[0]->setStepCount( data.contexts[0]->getStepCount() + 1 );
-				data.contexts[0]->reorderAtoms();
+			void StepKernel::UpdateTime( Integrator &integrator, const unsigned int steps ) {
+				data.contexts[0]->setTime( data.contexts[0]->getTime() + integrator.getStepSize() * steps );
+				data.contexts[0]->setStepCount( data.contexts[0]->getStepCount() + steps );
 			}
 
 			void StepKernel::LinearMinimize( OpenMM::ContextImpl &context, Integrator &integrator, const double energy ) {

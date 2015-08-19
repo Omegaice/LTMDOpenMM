@@ -30,7 +30,7 @@ namespace OpenMM {
 					void initialize( const OpenMM::System &system, Integrator &integrator );
 
 					void Integrate( OpenMM::ContextImpl &context, Integrator &integrator );
-					void UpdateTime( Integrator &integrator );
+					void UpdateTime( Integrator &integrator, const unsigned int steps );
 
 					void LinearMinimize( OpenMM::ContextImpl &context, Integrator &integrator, const double energy );
 					virtual double computeKineticEnergy( OpenMM::ContextImpl &context, Integrator &integrator ) {

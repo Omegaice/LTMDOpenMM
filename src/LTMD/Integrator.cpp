@@ -72,11 +72,10 @@ namespace OpenMM {
 
 				IntegrateStep();
 				Minimize( mParameters.MaximumMinimizationIterations );
-				TimeAndCounterStep();
 			}
 
 			// Update Time
-			context->setTime( context->getTime() + getStepSize() * mLastCompleted );
+			TimeAndCounterStep(mLastCompleted);
 
 			// Print Minimizations
 			const unsigned int total = mSimpleMinimizations;
@@ -165,12 +164,12 @@ namespace OpenMM {
 #endif
 		}
 
-		void Integrator::TimeAndCounterStep() {
+		void Integrator::TimeAndCounterStep(const unsigned int steps) {
 #ifdef PROFILE_INTEGRATOR
 			timeval start, end;
 			gettimeofday( &start, 0 );
 #endif
-			( ( StepKernel & )( kernel.getImpl() ) ).UpdateTime( *this );
+			( ( StepKernel & )( kernel.getImpl() ) ).UpdateTime( *this, steps );
 #ifdef PROFILE_INTEGRATOR
 			gettimeofday( &end, 0 );
 			double elapsed = ( end.tv_sec - start.tv_sec ) * 1000.0 + ( end.tv_usec - start.tv_usec ) / 1000.0;

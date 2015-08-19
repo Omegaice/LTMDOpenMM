@@ -80,9 +80,9 @@ namespace OpenMM {
 				}
 			}
 
-			void StepKernel::UpdateTime( Integrator &integrator ) {
-				data.time += integrator.getStepSize();
-				data.stepCount++;
+			void StepKernel::UpdateTime( Integrator &integrator, const unsigned int steps ) {
+				data.time += integrator.getStepSize() * steps;
+				data.stepCount += steps;
 			}
 
 			void StepKernel::LinearMinimize( ContextImpl &context, Integrator &integrator, const double energy ) {

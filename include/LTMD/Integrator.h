@@ -126,7 +126,7 @@ namespace OpenMM {
 
 				// Kernel Functions
 				void IntegrateStep();
-				void TimeAndCounterStep();
+				void TimeAndCounterStep(const unsigned int steps);
 
 				double LinearMinimize( const double energy );
 

@@ -27,7 +27,7 @@ namespace OpenMM {
 				virtual void initialize( const OpenMM::System &system, Integrator &integrator ) = 0;
 
 				virtual void Integrate( OpenMM::ContextImpl &context, Integrator &integrator ) = 0;
-				virtual void UpdateTime( Integrator &integrator ) = 0;
+				virtual void UpdateTime( Integrator &integrator, const unsigned int steps ) = 0;
 
 				virtual double computeKineticEnergy( OpenMM::ContextImpl &context, Integrator &integrator ) = 0;
 
