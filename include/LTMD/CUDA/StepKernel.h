@@ -33,7 +33,7 @@ namespace OpenMM {
 					void Integrate( OpenMM::ContextImpl &context, Integrator &integrator );
 					void UpdateTime( Integrator &integrator, const unsigned int steps );
 
-					void LinearMinimize( OpenMM::ContextImpl &context, Integrator &integrator, const double energy );
+					bool LinearMinimize( OpenMM::ContextImpl &context, Integrator &integrator, const double energy );
 					virtual double computeKineticEnergy( OpenMM::ContextImpl &context, Integrator &integrator ) {
 						return data.contexts[0]->getIntegrationUtilities().computeKineticEnergy( 0.5 * integrator.getStepSize() );
 					}
@@ -48,6 +48,7 @@ namespace OpenMM {
 					CudaArray *modeWeights;
 					CudaArray *MinimizeLambda;
 					CudaArray *pPosqP;
+					CudaArray *cCurrentEnergy, *cPassed;
 					double lastPE;
 					int iterations;
 					int kIterations;

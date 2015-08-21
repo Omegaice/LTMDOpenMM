@@ -102,7 +102,7 @@ namespace OpenMM {
 				data.stepCount += steps;
 			}
 
-			void StepKernel::LinearMinimize( ContextImpl &context, Integrator &integrator, const double energy ) {
+			bool StepKernel::LinearMinimize( ContextImpl &context, Integrator &integrator, const double energy ) {
 				VectorArray &coordinates = extractPositions( context );
 				const VectorArray &forces = extractForces( context );
 
@@ -130,6 +130,8 @@ namespace OpenMM {
 					coordinates[i][1] += factor * mXPrime[i][1];
 					coordinates[i][2] += factor * mXPrime[i][2];
 				}
+
+				return true;
 			}
 
 			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

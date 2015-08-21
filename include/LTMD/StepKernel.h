@@ -32,7 +32,7 @@ namespace OpenMM {
 
 				virtual double computeKineticEnergy( OpenMM::ContextImpl &context, Integrator &integrator ) = 0;
 
-				virtual void LinearMinimize( OpenMM::ContextImpl &context, Integrator &integrator, const double energy ) = 0;
+				virtual bool LinearMinimize( OpenMM::ContextImpl &context, Integrator &integrator, const double energy ) = 0;
 		};
 	}
 }

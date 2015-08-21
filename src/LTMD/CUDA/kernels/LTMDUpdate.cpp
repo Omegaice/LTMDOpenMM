@@ -36,16 +36,19 @@ void kNMLUpdate( CUmodule *module, CudaContext *cu, float deltaT, float tau, flo
 
 }
 
-void kNMLLinearMinimize( CUmodule *module, CudaContext *cu, int numModes, float maxEigenvalue, CudaArray &oldpos, CudaArray &modes, CudaArray &modeWeights ) {
+void kNMLLinearMinimize( CUmodule *module, CudaContext *cu, int numModes, float maxEigenvalue, CudaArray &oldpos, CudaArray &modes, CudaArray &modeWeights, float kT, float eCurrent, CudaArray &passed ) {
 	int atoms = cu->getNumAtoms();
 	int paddedatoms = cu->getPaddedNumAtoms();
+	int randomIndex = cu->getIntegrationUtilities().prepareRandomNumbers(1);
 	float oneoverEig = 1.0f / maxEigenvalue;
+	int blockSize = cu->ThreadBlockSize;
+    int gridSize = std::min((cu->getNumThreadBlocks()*cu->ThreadBlockSize+blockSize-1)/blockSize, cu->getNumThreadBlocks());
+	int eCount = cu->getEnergyBuffer().getSize();
 
-	CUfunction linmin1Kernel = cu->getKernel( *module, "kNMLLinearMinimize1_kernel" );
-	void *linmin1Args[] = {&atoms, &paddedatoms, &numModes, &cu->getVelm().getDevicePointer(), &cu->getForce().getDevicePointer(), &modes.getDevicePointer(), &modeWeights.getDevicePointer()};
+	CUfunction linmin1Kernel = cu->getKernel( *module, "kNMLMinimize" );
+	void *linmin1Args[] = {
+		&blockSize, &gridSize, &kT, &eCurrent, &passed, &cu->getIntegrationUtilities().getRandom().getDevicePointer(), &randomIndex, &cu->getEnergyBuffer().getDevicePointer(), &eCount, &atoms, &paddedatoms, &numModes, &oneoverEig,
+		&cu->getPosq().getDevicePointer(), &oldpos.getDevicePointer(), &cu->getVelm().getDevicePointer(), &cu->getForce().getDevicePointer(), &modes.getDevicePointer(), &modeWeights.getDevicePointer()
+	};
 	cu->executeKernel( linmin1Kernel, linmin1Args, cu->getNumThreadBlocks()*cu->ThreadBlockSize, cu->ThreadBlockSize, cu->ThreadBlockSize * sizeof( float ) );
-
-	CUfunction linmin2Kernel = cu->getKernel( *module, "kNMLLinearMinimize2_kernel" );
-	void *linmin2Args[] = {&atoms, &paddedatoms, &numModes, &oneoverEig, &cu->getPosq().getDevicePointer(), &oldpos.getDevicePointer(), &cu->getVelm().getDevicePointer(), &cu->getForce().getDevicePointer(), &modes.getDevicePointer(), &modeWeights.getDevicePointer()};
-	cu->executeKernel( linmin2Kernel, linmin2Args, cu->getNumThreadBlocks()*cu->ThreadBlockSize, cu->ThreadBlockSize, numModes * sizeof( float ) );
 }

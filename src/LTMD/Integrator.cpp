@@ -77,11 +77,10 @@ namespace OpenMM {
 					IntegrateStep();
 					mLastCompleted++;
 				}else{
-					if( MetropolisTermination(CurrentPE, mMetropolisPE) ) {
+					if( LinearMinimize(CurrentPE) ) {
 						isIntegrate = true;
 					}else{
 						mSimpleMinimizations++;
-						LinearMinimize(CurrentPE);
 					}
 				}
 			}
@@ -172,17 +171,18 @@ namespace OpenMM {
 #endif
 		}
 
-		void Integrator::LinearMinimize( const double energy ) {
+		bool Integrator::LinearMinimize( const double energy ) {
 #ifdef PROFILE_INTEGRATOR
 			timeval start, end;
 			gettimeofday( &start, 0 );
 #endif
-			( ( StepKernel & )( kernel.getImpl() ) ).LinearMinimize( *context, *this, energy );
+			const double result = ( ( StepKernel & )( kernel.getImpl() ) ).LinearMinimize( *context, *this, energy );
 #ifdef PROFILE_INTEGRATOR
 			gettimeofday( &end, 0 );
 			double elapsed = ( end.tv_sec - start.tv_sec ) * 1000.0 + ( end.tv_usec - start.tv_usec ) / 1000.0;
 			std::cout << "[OpenMM::Integrator] Linear Minimize: " << elapsed << "ms" << std::endl;
 #endif
+			return result;
 		}
 	}
 }

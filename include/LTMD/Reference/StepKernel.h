@@ -55,7 +55,7 @@ namespace OpenMM {
 					void Integrate( OpenMM::ContextImpl &context, Integrator &integrator );
 					void UpdateTime( Integrator &integrator, const unsigned int steps );
 
-					void LinearMinimize( OpenMM::ContextImpl &context, Integrator &integrator, const double energy );
+					bool LinearMinimize( OpenMM::ContextImpl &context, Integrator &integrator, const double energy );
 					void updateState( OpenMM::ContextImpl &context ) {}
 					virtual double computeKineticEnergy( OpenMM::ContextImpl &context, Integrator &integrator ) {
 						return computeShiftedKineticEnergy( context, mMasses, 0.5 * integrator.getStepSize() );

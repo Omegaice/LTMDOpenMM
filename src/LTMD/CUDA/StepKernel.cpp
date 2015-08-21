@@ -18,7 +18,7 @@ using namespace OpenMM;
 
 extern void kGenerateRandoms ( CudaContext *gpu );
 void kNMLUpdate ( CUmodule *module, CudaContext *gpu, float deltaT, float tau, float kT, int numModes, int &iterations, CudaArray &modes, CudaArray &modeWeights, CudaArray &noiseValues );
-void kNMLLinearMinimize ( CUmodule *module, CudaContext *gpu, int numModes, float maxEigenvalue, CudaArray &oldpos, CudaArray &modes, CudaArray &modeWeights );
+void kNMLLinearMinimize ( CUmodule *module, CudaContext *cu, int numModes, float maxEigenvalue, CudaArray &oldpos, CudaArray &modes, CudaArray &modeWeights, float kT, float eCurrent, CudaArray &passed );
 
 double drand() {/* uniform distribution, (0..1] */
 	return ( rand() + 1.0 ) / ( RAND_MAX + 1.0 );
@@ -51,6 +51,10 @@ namespace OpenMM {
 				updatemodule = data.contexts[0]->createModule( KernelSources::NMLupdates );
 
 				mParticles = data.contexts[0]->getNumAtoms();
+
+				cCurrentEnergy = new CudaArray( *( data.contexts[0] ), 1, sizeof( float ), "CurrentEnergy" );
+				cPassed = new CudaArray( *( data.contexts[0] ), 1, sizeof( bool ), "Passed" );
+
 
 				NoiseValues = new CudaArray( *( data.contexts[0] ), mParticles, sizeof( float4 ), "NoiseValues" );
 				std::vector<float4> tmp( mParticles );
@@ -107,8 +111,13 @@ namespace OpenMM {
 				data.contexts[0]->setStepCount( data.contexts[0]->getStepCount() + steps );
 			}
 
-			void StepKernel::LinearMinimize( OpenMM::ContextImpl &context, Integrator &integrator, const double energy ) {
-				kNMLLinearMinimize( &linmodule, data.contexts[0], mProjectionVectors, integrator.getMaxEigenvalue(), *pPosqP, *modes, *modeWeights );
+			bool StepKernel::LinearMinimize( OpenMM::ContextImpl &context, Integrator &integrator, const double energy ) {
+				kNMLLinearMinimize( &linmodule, data.contexts[0], mProjectionVectors, integrator.getMaxEigenvalue(), *pPosqP, *modes, *modeWeights, ( float )( BOLTZ * integrator.getTemperature() ), (float)energy, *cPassed );
+
+				bool result;
+				cPassed->download(&result);
+
+				return result;
 			}
 		}
 	}

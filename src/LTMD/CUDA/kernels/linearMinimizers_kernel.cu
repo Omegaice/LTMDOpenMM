@@ -1,4 +1,4 @@
-extern "C" __global__ void kNMLLinearMinimize1_kernel( int numAtoms, int paddedNumAtoms, int numModes, float4 *velm, long long *force, float4 *modes, float *modeWeights ) {
+__device__ void kNMLLinearMinimize1_kernel( int numAtoms, int paddedNumAtoms, int numModes, float4 *velm, long long *force, float4 *modes, float *modeWeights ) {
 	extern __shared__ float dotBuffer[];
 	for( int mode = blockIdx.x; mode < numModes; mode += gridDim.x ) {
 		/* Compute the projection of the mass weighted force onto one normal mode vector.*/
@@ -27,7 +27,7 @@ extern "C" __global__ void kNMLLinearMinimize1_kernel( int numAtoms, int paddedN
 	}
 }
 
-extern "C" __global__ void kNMLLinearMinimize2_kernel( int numAtoms, int paddedNumAtoms, int numModes, float invMaxEigen, float4 *posq, float4 *posqP, float4 *velm, long long *force, float4 *modes, float *modeWeights ) {
+__device__ void kNMLLinearMinimize2_kernel( int numAtoms, int paddedNumAtoms, int numModes, float invMaxEigen, float4 *posq, float4 *posqP, float4 *velm, long long *force, float4 *modes, float *modeWeights ) {
 	/* Load the weights into shared memory.*/
 	extern __shared__ float weightBuffer[];
 	for( int mode = threadIdx.x; mode < numModes; mode += blockDim.x ) {
@@ -59,4 +59,28 @@ extern "C" __global__ void kNMLLinearMinimize2_kernel( int numAtoms, int paddedN
 		pos.z += factor * posqP[atom].z;
 		posq[atom] = pos;
 	}
+}
+
+extern "C" __global__ void kNMLMinimize( const int blockSize, const int gridSize, const float kT, const float eCurrent, bool* passed, const float4 *__restrict__ random, const unsigned int randomIndex, float* energy, int eCount, int numAtoms, int paddedNumAtoms, int numModes, float invMaxEigen, float4 *posq, float4 *posqP, float4 *velm, long long *force, float4 *modes, float *modeWeights ) {
+	float eOriginal;
+	for( int i = 0; i < eCount; i++ ){
+		eOriginal += energy[i];
+	}
+
+	if( eCurrent < eOriginal ) {
+		passed[0] = true;
+		return;
+	}
+
+	const double prob = exp(-( 1.0 / kT ) * ( eCurrent - eOriginal ));
+	if( random[randomIndex].x < prob ) {
+		passed[0] = true;
+		return;
+	}
+
+	kNMLLinearMinimize1_kernel<<< gridSize, blockSize >>> (numAtoms, paddedNumAtoms, numModes, velm, force, modes, modeWeights);
+	__syncthreads();
+	kNMLLinearMinimize2_kernel<<< gridSize, blockSize >>> (numAtoms, paddedNumAtoms, numModes, invMaxEigen, posq, posqP, velm, force, modes, modeWeights);
+
+	passed[0] = false;
 }
