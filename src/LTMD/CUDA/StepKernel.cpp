@@ -53,8 +53,10 @@ namespace OpenMM {
 				mParticles = data.contexts[0]->getNumAtoms();
 
 				cCurrentEnergy = new CudaArray( *( data.contexts[0] ), 1, sizeof( float ), "CurrentEnergy" );
-				cPassed = new CudaArray( *( data.contexts[0] ), 1, sizeof( bool ), "Passed" );
 
+				bool value = false;
+				cPassed = new CudaArray( *( data.contexts[0] ), 1, sizeof( bool ), "Passed" );
+				cPassed->upload(&value);
 
 				NoiseValues = new CudaArray( *( data.contexts[0] ), mParticles, sizeof( float4 ), "NoiseValues" );
 				std::vector<float4> tmp( mParticles );

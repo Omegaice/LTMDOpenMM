@@ -1,4 +1,3 @@
-#include "openmm/OpenMMException.h"
 #include "openmm/State.h"
 #include "openmm/Vec3.h"
 #include <sys/time.h>

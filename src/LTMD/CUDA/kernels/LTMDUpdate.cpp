@@ -47,7 +47,7 @@ void kNMLLinearMinimize( CUmodule *module, CudaContext *cu, int numModes, float 
 
 	CUfunction linmin1Kernel = cu->getKernel( *module, "kNMLMinimize" );
 	void *linmin1Args[] = {
-		&blockSize, &gridSize, &kT, &eCurrent, &passed, &cu->getIntegrationUtilities().getRandom().getDevicePointer(), &randomIndex, &cu->getEnergyBuffer().getDevicePointer(), &eCount, &atoms, &paddedatoms, &numModes, &oneoverEig,
+		&blockSize, &gridSize, &kT, &eCurrent, &passed.getDevicePointer(), &cu->getIntegrationUtilities().getRandom().getDevicePointer(), &randomIndex, &cu->getEnergyBuffer().getDevicePointer(), &eCount, &atoms, &paddedatoms, &numModes, &oneoverEig,
 		&cu->getPosq().getDevicePointer(), &oldpos.getDevicePointer(), &cu->getVelm().getDevicePointer(), &cu->getForce().getDevicePointer(), &modes.getDevicePointer(), &modeWeights.getDevicePointer()
 	};
 	cu->executeKernel( linmin1Kernel, linmin1Args, cu->getNumThreadBlocks()*cu->ThreadBlockSize, cu->ThreadBlockSize, cu->ThreadBlockSize * sizeof( float ) );

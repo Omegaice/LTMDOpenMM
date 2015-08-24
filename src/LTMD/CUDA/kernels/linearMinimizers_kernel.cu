@@ -68,19 +68,20 @@ extern "C" __global__ void kNMLMinimize( const int blockSize, const int gridSize
 	}
 
 	if( eCurrent < eOriginal ) {
-		passed[0] = true;
+		if( threadIdx.x == 0 ) passed[0] = true;
 		return;
 	}
 
 	const double prob = exp(-( 1.0 / kT ) * ( eCurrent - eOriginal ));
 	if( random[randomIndex].x < prob ) {
-		passed[0] = true;
+		if( threadIdx.x == 0 ) passed[0] = true;
 		return;
 	}
 
-	kNMLLinearMinimize1_kernel<<< gridSize, blockSize >>> (numAtoms, paddedNumAtoms, numModes, velm, force, modes, modeWeights);
+	kNMLLinearMinimize1_kernel(numAtoms, paddedNumAtoms, numModes, velm, force, modes, modeWeights);
 	__syncthreads();
-	kNMLLinearMinimize2_kernel<<< gridSize, blockSize >>> (numAtoms, paddedNumAtoms, numModes, invMaxEigen, posq, posqP, velm, force, modes, modeWeights);
+	kNMLLinearMinimize2_kernel(numAtoms, paddedNumAtoms, numModes, invMaxEigen, posq, posqP, velm, force, modes, modeWeights);
+	__syncthreads();
 
-	passed[0] = false;
+	if( threadIdx.x == 0 ) passed[0] = false;
 }
