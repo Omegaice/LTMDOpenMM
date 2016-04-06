@@ -14,7 +14,7 @@ namespace OpenMM {
 	namespace LTMD {
 		class Analysis;
 
-		class OPENMM_EXPORT Integrator : public OpenMM::Integrator {
+		class Integrator : public OpenMM::Integrator {
 			public:
 				/**
 				 * Create a NMLIntegrator.

@@ -22,7 +22,7 @@ namespace OpenMM {
 		typedef std::vector<double> EigenvalueArray;
 		typedef std::pair<double, int> EigenvalueColumn;
 
-		class OPENMM_EXPORT Analysis {
+		class Analysis {
 			public:
 				Analysis() : mParticleCount( 0 ), mLargestBlockSize( -1 ) {
 					mInitialized = false;
