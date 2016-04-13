@@ -27,6 +27,10 @@ namespace OpenMM {
 
 				~Integrator();
 
+				OpenMM::Integrator& GetBase(){
+					return *this;
+				}
+
 				/**
 				 * Get the temperature of the heat bath (in Kelvin).
 				 */
