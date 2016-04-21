@@ -11,6 +11,7 @@ namespace OpenMM {
 		}
 
 		struct Force {
+		  Force(){}
 			Force( std::string n, int i ) : name( n ), index( i ) {}
 			std::string name;
 			int index;
