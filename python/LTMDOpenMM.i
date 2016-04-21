@@ -1,25 +1,37 @@
 %module ltmdopenmm
 
-%import(module="simtk.openmm") "swig/OpenMMSwigHeaders.i"
-%include "swig/typemaps.i"
+%{
+#include "LTMD/Integrator.h"
+
+#include "OpenMM.h"
+#include "OpenMM.h"
+#include "OpenMMAmoeba.h"
+#include "OpenMMDrude.h"
+#include "openmm/RPMDIntegrator.h"
+#include "openmm/RPMDMonteCarloBarostat.h"
+%}
+
+%import(module="simtk.openmm") "OpenMMSwigHeaders.i"
+%include "typemaps.i"
 
 %include "std_string.i"
 %include "std_vector.i"
 namespace std {
-  %template(IntVector) vector<int>;
-  %template(ForceVector) vector<OpenMM::LTMD::Force>;
+  %template(vectord) vector<double>;
+  %template(vectori) vector<int>;
+  %template(vectorf) vector<OpenMM::LTMD::Force>;
 }
-
-%{
-#include "LTMD/Integrator.h"
-#include "LTMD/Parameters.h"
-
-using namespace OpenMM::LTMD;
-%}
 
 %pythoncode %{
 import simtk.openmm as mm
 import simtk.unit as unit
+%}
+
+%pythonprepend %{
+try:
+  args=mm.stripUnits(args)
+except UnboundLocalError:
+  pass
 %}
 
 namespace OpenMM {
